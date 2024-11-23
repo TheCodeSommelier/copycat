@@ -70,7 +70,7 @@ git clone https://github.com/TheCodeSommelier/copycat.git
 # Install dependencies
 npm install
 
-# Create environment file
+# Create environment files
 cp .env.email .env.trading .env
 ```
 
@@ -89,13 +89,16 @@ BINANCE_API_SECRET=your_binance_secret
 ENCRYPTION_KEY=your-32-character-encryption-key
 ```
 
-### Running the Application
+### Running the Application !!!TBD!!!
 ```bash
 # Development
 npm run dev
 
-# Production
-npm start
+# To run on your computer in the background
+npm run copy-trades
+
+# To check logs
+npm run logs
 ```
 
 ## Email Format !!!TBD!!!
