@@ -134,6 +134,7 @@ export default class SecureEmailParser {
       text
         .replace(/<[^>]*>/g, "") // Remove HTML tags
         .replace(/[\x00-\x1F\x7F-\x9F]/g, "") // Remove control characters
+        .replace(/&gt;/g, "")
         .trim()
     );
   }
@@ -150,10 +151,7 @@ export default class SecureEmailParser {
 
     // Second pass: additional security measures
     secured = secured
-      .replace(
-        /<script[^>]*>[\s\S]*?<\/script>/gi,
-        "[REMOVED]SCR"
-      )
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "[REMOVED]SCR")
       .replace(/(javascript:|data:|vbscript:)/gi, "[REMOVED]")
       .replace(/on\w+=/gi, "[REMOVED]")
       .replace(/&lt;script&gt;[\s\S]*?&lt;\/script&gt;/gi, "[REMOVED]");
