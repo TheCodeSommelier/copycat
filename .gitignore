@@ -3,3 +3,6 @@ node_modules
 # Ignore all of the secrets files
 .env.*
 .env
+
+/logs
+/logs/*

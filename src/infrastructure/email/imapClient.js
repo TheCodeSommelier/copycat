@@ -1,11 +1,13 @@
 import Imap from "imap";
+import EventEmitter from "events";
 import logger from "../../services/loggerService.js";
 import SecureEmailParser from "./emailParser.js";
-import { imapConfig } from "../../../config.js";
+import { imapConfig } from "../../config/imap.js";
 import { simpleParser } from "mailparser";
 
-export default class ImapClient {
+export default class ImapClient extends EventEmitter {
   constructor() {
+    super();
     this.imap = new Imap(imapConfig);
     this.emailParser = new SecureEmailParser({
       allowedDomains: ["tony-masek.com"], // Any allowed sender domains here
@@ -41,7 +43,7 @@ export default class ImapClient {
 
     this.imap.on("ready", () => {
       logger.info("✅ You are in bud!");
-      this.watchInbox(this.emailHandler);
+      this.watchInbox();
       logger.info("👀 Watching the inbox!");
     });
 
@@ -58,20 +60,7 @@ export default class ImapClient {
     });
   }
 
-  emailHandler(err, email) {
-    if (err) {
-      console.error("Error processing email:", err);
-      return;
-    }
-
-    console.log("New Email Received:");
-    console.log("From:", email.from);
-    console.log("Subject:", email.subject);
-    console.log("Text:", email.text);
-    console.log("HTML:", email.html);
-  }
-
-  watchInbox(callback) {
+  watchInbox() {
     this.imap.openBox("INBOX", false, (err, box) => {
       if (err) {
         logger.error("Error opening inbox:", err);
@@ -80,17 +69,17 @@ export default class ImapClient {
 
       // Listen for new emails
       this.imap.on("mail", () => {
-        this.#fetchNewEmails(box.messages.total, callback);
+        this.#fetchNewEmails(box.messages.total);
       });
     });
   }
 
   // Private functions
 
-  async #fetchNewEmails(numNew, callback) {
+  async #fetchNewEmails(numNew) {
     try {
       const fetchEmail = this.imap.seq.fetch(`${numNew}:*`, {
-        bodies: "",  // Fetch the entire message
+        bodies: "", // Fetch the entire message
         struct: true,
       });
 
@@ -108,27 +97,23 @@ export default class ImapClient {
               from: parsedEmail.from,
               to: parsedEmail.to,
               attachments: parsedEmail.attachments,
-              date: parsedEmail.date
+              date: parsedEmail.date,
             };
 
             // Now pass the properly parsed email to SecureEmailParser
             const secureEmail = await this.emailParser.parse(emailData);
-            callback(null, secureEmail);
+            this.emit("newEmail", secureEmail);
           } catch (error) {
             logger.error("Error parsing email:", error);
-            callback(error);
           }
         });
       });
 
       fetchEmail.once("error", (err) => {
         logger.error("Fetch error:", err);
-        callback(err);
       });
-
     } catch (error) {
       logger.error("Fatal fetch error:", error);
-      callback(error);
     }
   }
 }
