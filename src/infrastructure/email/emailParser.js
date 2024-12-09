@@ -2,16 +2,34 @@ import EmailValidator from "./emailValidator.js";
 import crypto from "crypto";
 import validator from "validator";
 import sanitizeHtml from "sanitize-html";
+import TradeDataExtractor from "./tradeDataParser.js";
 
 export default class SecureEmailParser {
   sanitizeOptions = {
-    allowedTags: ["b", "i", "em", "strong", "p", "br", "h1", "h2", "h3"],
+    allowedTags: [
+      "b",
+      "i",
+      "em",
+      "strong",
+      "p",
+      "br",
+      "h1",
+      "h2",
+      "h3",
+      "ol",
+      "ul",
+      "li",
+      "span",
+    ],
     selfClosing: ["br"],
     nonBooleanAttributes: [],
-    allowedAttributes: {},
+    allowedAttributes: {
+      "*": ["class", "id"],
+    },
     allowedSchemes: [],
     allowedSchemesAppliedToAttributes: [],
     allowedSchemesByTag: {},
+    allowedIframeHostnames: [],
     disallowedTagsMode: "discard",
     allowProtocolRelative: false,
     parser: {
@@ -26,6 +44,8 @@ export default class SecureEmailParser {
    * @throws {Error} If validation or parsing fails
    */
   async parse(emailData) {
+    console.log(`\nUnsanitized email html data => ${emailData.html}\n\n`);
+
     try {
       const validationResult = EmailValidator.validateEmail(emailData);
       const validatedEmail = {};
@@ -42,8 +62,12 @@ export default class SecureEmailParser {
         throw new Error("Validation failed");
       }
 
+      console.log(`\nSanitized email html data => ${validatedEmail.html}\n\n`);
+
       validatedEmail.emailHash = this.#generateHash(validatedEmail);
-      return validatedEmail;
+      const tradeData = TradeDataExtractor.extractTradeData(validatedEmail);
+
+      return tradeData;
     } catch (error) {
       // Log error securely (avoid exposing sensitive data)
       console.error("Email parsing error:", {

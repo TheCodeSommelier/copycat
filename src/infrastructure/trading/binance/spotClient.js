@@ -4,61 +4,103 @@
 
 import { MainClient } from "binance";
 import { binanceConfig } from "../../../config/binance.js";
-
-// tradeData = {
-  //   baseSymbol: baseSymbol, // BTC, ETH, etc. (What you want)
-  //   quoteSymbol: quoteSymbol, // USDT, USDC, USD, etc. (What you are trading for)
-  //   marketType: marketType, // SPOT || FUTURES
-  //   side: side, // IN || OUT ((IN === BUY || ENTER) && (OUT === SELL || EXIT))
-  //   symbol: `${baseSymbol}${quoteSymbol}`, // BTCUSDC, BTCUSDT, etc.
-  //   type: type, // 'LIMIT' | 'LIMIT_MAKER' | 'MARKET' | 'STOP_LOSS' | 'STOP_LOSS_LIMIT' | 'TAKE_PROFIT' | 'TAKE_PROFIT_LIMIT'
-  // };
+import TradeValidator from "../tradeValidator.js";
 
 export default class SpotClient {
   constructor() {
     this.client = new MainClient(binanceConfig);
+    this.validator = new TradeValidator();
   }
 
-  async getPrice() {
-    const priceFetch = await this.client.getSymbolPriceTicker({
-      symbol: this.tradeData.symbol,
-    });
-    const result = priceFetch;
-    return result.price;
+  executeTrade(tradeData = {}) {
+    // const tradeType = this.#chooseTradeType(tradeData);
   }
 
-  async getQnty(symbol, price) {
+  executeBuyOrder() {
 
+  }
+
+  executeSellOrder() {
+    // First Market order to sell/cover
+    // Cancel all orders on this symbol to clean stop loss targets entries etc.
   }
 
   // [ALERT] ONLY TEST ORDER
-  async createTestSpotOrder(
-    baseSymbol,
-    quoteSymbol,
-    symbol,
-    marketType,
-    side,
-    type
-  ) {
-    const price = await this.getPrice();
-    const qnty = await this.getQnty();
+  async createTestOrder(tradeData = {}) {
+    const symbol = `${tradeData.baseAsset}${tradeData.quoteAsset}`; // When buying BTC symbol === "BTCUSDT"
+    console.log("Symbol: ", symbol);
 
-    await this.client
-      .testNewOrder({
-        side: side,
+    try {
+      const price = await this.getPrice(symbol);
+      console.log("Price works");
+
+      // const qntyQuoteAsset = await this.#getQnty(price, tradeData.quoteAsset);
+
+      const tradeDataObj = {
+        side: tradeData.side,
         symbol: symbol,
-        type: type,
-        quantity: qnty,
-        price: price,
-        timeInForce: "IOC",
-        newOrderRespType: "FULL",
+        type: tradeData.type,
+        quoteOrderQty: qntyQuoteAsset,
+        newOrderRespType: "RESULT",
         computeCommissionRates: true,
-      })
-      .then((result) => {
-        console.log("RESULT!!!!! => ", result);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+      };
+
+      console.log("Before testing purposes change => ", tradeDataObj);
+
+      tradeDataObj.quoteOrderQty = "100.0";
+
+      console.log("After testing purposes change => ", tradeDataObj);
+
+      const validatnResObj = this.validator.validateSpotTradeData(tradeDataObj);
+      const validatnMsgsStr = validatnResObj.messages.join(", ");
+
+      if (validatnResObj.result.includes(false)) throw new Error(`Trade validation failed. Here is why: ${validatnMsgsStr}`);
+
+      await this.client
+        .testNewOrder(tradeDataObj)
+        .then((result) => {
+          console.log("RESULT!!!!! => ", result);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    } catch (err) {
+      console.error(err);
+      console.log(err);
+    }
   }
+
+  // async getPrice(symbol) {
+  //   try {
+  //     const priceFetch = await this.client.getSymbolPriceTicker({
+  //       symbol: symbol,
+  //     });
+  //     return parseFloat(priceFetch.price);
+  //   } catch (err) {
+  //     console.log(err);
+  //   }
+  // }
+
+  // async #getQnty(quoteAsset) {
+  //   try {
+  //     // Gets the balance of the coin you are buving for (USDT)
+  //     const quoteAssetsArr = await this.client.getUserAsset({
+  //       asset: quoteAsset,
+  //       timestamp: Date.now,
+  //     });
+
+  //     const quoteAssetObj = quoteAssetsArr
+  //       .filter((assetObj) => {
+  //         assetObj.asset === quoteAsset;
+  //       })
+  //       .map((assetObj) => {
+  //         return assetObj;
+  //       });
+
+  //     const tenPercentOfAsset = quoteAssetsArr.length === 0 ? 0.0 : parseInt(quoteAssetObj.free) * 0.1; // 10% of total balance
+  //     return tenPercentOfAsset.toString();
+  //   } catch (err) {
+  //     console.error(err);
+  //   }
+  // }
 }
