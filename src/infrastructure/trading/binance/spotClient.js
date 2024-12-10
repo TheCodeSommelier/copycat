@@ -3,7 +3,6 @@ import { binanceConfig } from "../../../config/binance.js";
 import TradeValidator from "../tradeValidator.js";
 import { getQuantity } from "../utils.js";
 
-
 export default class SpotClient {
   constructor() {
     this.client = new MainClient(binanceConfig);
@@ -36,9 +35,7 @@ export default class SpotClient {
 
       console.log("Qnty => ", orderDataObj.quantity);
 
-
       if (orderDataObj.quantity == 0) orderDataObj.quantity = "100.0";
-
 
       // const validatnResObj = this.validator.validateSpotTradeData(orderDataObj);
       // const validatnMsgsStr = validatnResObj.messages.join(", ");
@@ -49,7 +46,7 @@ export default class SpotClient {
       //   );
       // }
 
-      await this.client
+      return await this.client
         .testNewOrder(orderDataObj)
         .then((result) => {
           console.log("RESULT!!!!! => ", result);

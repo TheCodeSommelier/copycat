@@ -214,8 +214,8 @@ const main = async () => {
 '\n'`;
 
   const validatedEmail = {
-    subject: "Buy Alert: TON/USD",
-    html: testHtmlString1,
+    subject: "Short Alert: ETH/USD (Add)",
+    html: testHtmlString2,
   };
   const tradeData = TradeDataExtractor.extractTradeData(validatedEmail);
   console.log(tradeData);

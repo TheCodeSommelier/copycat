@@ -13,6 +13,7 @@ export default class FuturesClient {
       const result = await Promise.all(
         this.tradeData.orders.map((order) => this.enqueueTestOrder(order))
       );
+      return result;
     } catch (err) {
       console.log(err);
     }
@@ -23,10 +24,11 @@ export default class FuturesClient {
       const orderData = {
         ...order,
         quantity: await getQuantity(order, this.client, true),
+        computeCommissionRates: true,
+        newOrderRespType: "RESULT",
       };
 
       console.log("Qnty => ", orderData);
-
 
       if (orderData.quantity == 0) orderData.quantity = "100.0";
 
@@ -39,11 +41,10 @@ export default class FuturesClient {
       //   );
       // }
 
-      this.client
+      return this.client
         .testOrder(orderData)
-        .then((response) => response.json())
-        .then((data) => {
-          return data;
+        .then((result) => {
+          return result;
         })
         .catch((err) => console.log(err));
     } catch (err) {
