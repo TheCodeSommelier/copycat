@@ -2,28 +2,28 @@
 const ORDER_TYPES = {
   ENTRY: {
     FUTURES: "LIMIT",
-    SPOT: "LIMIT"
+    SPOT: "LIMIT",
   },
   STOP: {
     FUTURES: "STOP_MARKET",
-    SPOT: "STOP_LOSS"
+    SPOT: "STOP_LOSS",
   },
   EXIT: {
     FUTURES: "TAKE_PROFIT_MARKET",
-    SPOT: "TAKE_PROFIT"
-  }
+    SPOT: "TAKE_PROFIT",
+  },
 };
 
 const TRADE_SIDES = {
   BUY: "BUY",
   SELL: "SELL",
   SHORT: "SHORT",
-  COVER: "COVER"
+  COVER: "COVER",
 };
 
 const CLIENT_TYPES = {
   FUTURES: "FUTURES",
-  SPOT: "SPOT"
+  SPOT: "SPOT",
 };
 
 export default class TradeDataExtractor {
@@ -34,21 +34,22 @@ export default class TradeDataExtractor {
     TARGET: /Target:\s+\$([0-9,]+(?:\.\d+)?)/i,
     SYMBOL: /(\p{Lu}+)\/(\p{Lu}+)/gu,
     SIDE: /short|buy|sell|cover/gi,
-    HALF: /half/gi
+    HALF: /half/gi,
   };
 
   static extractTradeData(validatedEmail) {
     try {
       const { subject, html } = validatedEmail;
       const side = this.extractSide(subject);
-      const symbol = this.extractSymbol(subject);
+      const coinSymbols = this.extractSymbol(subject);
+      const symbol = coinSymbols.symbol;
       const isFutures = this.isFuturesTrade(side);
       const isShort = side === TRADE_SIDES.SHORT;
 
       // Base trade data
       const tradeData = {
-        symbol,
-        clientType: isFutures ? CLIENT_TYPES.FUTURES : CLIENT_TYPES.SPOT
+        ...coinSymbols,
+        clientType: isFutures ? CLIENT_TYPES.FUTURES : CLIENT_TYPES.SPOT,
       };
 
       // Handle market orders (SELL/COVER)
@@ -63,7 +64,7 @@ export default class TradeDataExtractor {
             html,
             isFutures,
             isShort,
-            subject
+            subject,
           }),
         };
       }
@@ -77,8 +78,8 @@ export default class TradeDataExtractor {
           html,
           isFutures,
           isShort,
-          subject
-        })
+          subject,
+        }),
       };
     } catch (error) {
       throw new Error(`Failed to extract trade data: ${error.message}`);
@@ -89,27 +90,42 @@ export default class TradeDataExtractor {
     return {
       symbol,
       type: "MARKET",
-      side: isShort ? TRADE_SIDES.BUY : TRADE_SIDES.SELL
-    }
+      side: isShort ? TRADE_SIDES.BUY : TRADE_SIDES.SELL,
+    };
   }
 
   static createOrders({ symbol, html, isFutures, isShort, subject }) {
     const prices = this.extractPrices(html);
 
     return [
-      this.createEntryOrder({ symbol, price: prices.entryPrice, isFutures, isShort }),
-      this.createStopOrder({ symbol, price: prices.stopLoss, isFutures, isShort }),
-      this.createExitOrder({ symbol, price: prices.targetPrice, isFutures, isShort })
+      this.createEntryOrder({
+        symbol,
+        price: prices.entryPrice,
+        isFutures,
+        isShort,
+      }),
+      this.createStopOrder({
+        symbol,
+        price: prices.stopLoss,
+        isFutures,
+        isShort,
+      }),
+      this.createExitOrder({
+        symbol,
+        price: prices.targetPrice,
+        isFutures,
+        isShort,
+      }),
     ];
   }
 
   static createEntryOrder({ symbol, price, isFutures, isShort }) {
     const orderData = {
       symbol,
-      type: ORDER_TYPES.ENTRY[isFutures ? 'FUTURES' : 'SPOT'],
+      type: ORDER_TYPES.ENTRY[isFutures ? "FUTURES" : "SPOT"],
       price,
       timeInForce: "GTC",
-      side: isShort ? TRADE_SIDES.SELL : TRADE_SIDES.BUY
+      side: isShort ? TRADE_SIDES.SELL : TRADE_SIDES.BUY,
     };
 
     if (isShort) {
@@ -122,56 +138,61 @@ export default class TradeDataExtractor {
   static createStopOrder({ symbol, price, isFutures, isShort }) {
     return {
       symbol,
-      type: ORDER_TYPES.STOP[isFutures ? 'FUTURES' : 'SPOT'],
+      type: ORDER_TYPES.STOP[isFutures ? "FUTURES" : "SPOT"],
       stopPrice: price,
       side: isShort ? TRADE_SIDES.BUY : TRADE_SIDES.SELL,
-      ...(isFutures && { closePosition: true })
+      ...(isFutures && { closePosition: true }),
     };
   }
 
   static createExitOrder({ symbol, price, isFutures, isShort }) {
     return {
       symbol,
-      type: ORDER_TYPES.EXIT[isFutures ? 'FUTURES' : 'SPOT'],
+      type: ORDER_TYPES.EXIT[isFutures ? "FUTURES" : "SPOT"],
       stopPrice: price,
       side: isShort ? TRADE_SIDES.BUY : TRADE_SIDES.SELL,
-      ...(isFutures && { closePosition: true })
+      ...(isFutures && { closePosition: true }),
     };
   }
 
   static extractPrices(html) {
     return {
-      entryPrice: this.extractPrice(html, 'ENTRY'),
-      stopLoss: this.extractPrice(html, 'STOP'),
-      targetPrice: this.extractPrice(html, 'TARGET')
+      entryPrice: this.extractPrice(html, "ENTRY"),
+      stopLoss: this.extractPrice(html, "STOP"),
+      targetPrice: this.extractPrice(html, "TARGET"),
     };
   }
 
   static extractPrice(html, priceType) {
-    const match = html.replace(/confirmation\s+\w+/gi, '')
-                     .match(this.PRICE_PATTERNS[priceType]);
+    const match = html
+      .replace(/confirmation\s+\w+/gi, "")
+      .match(this.PRICE_PATTERNS[priceType]);
 
     if (!match?.[1]) {
       throw new Error(`Failed to extract ${priceType} price`);
     }
 
-    return parseFloat(match[1].replace(/[,$]/g, ''));
+    return parseFloat(match[1].replace(/[,$]/g, ""));
   }
 
   static extractSymbol(subject) {
     const match = subject.match(this.PRICE_PATTERNS.SYMBOL);
     if (!match?.[0]) {
-      throw new Error('Failed to extract symbol');
+      throw new Error("Failed to extract symbol");
     }
 
-    const [baseAsset, quoteAsset] = match[0].split('/');
-    return `${baseAsset}${quoteAsset === 'USD' ? 'USDT' : quoteAsset}`;
+    const [baseAsset, quoteAsset] = match[0].split("/");
+    return {
+      symbol: `${baseAsset}${quoteAsset === "USD" ? "USDT" : quoteAsset}`,
+      quoteAsset,
+      baseAsset,
+    };
   }
 
   static extractSide(subject) {
     const match = subject.match(this.PRICE_PATTERNS.SIDE);
     if (!match?.[0]) {
-      throw new Error('Failed to extract trade side');
+      throw new Error("Failed to extract trade side");
     }
     return match[0].toUpperCase();
   }

@@ -11,10 +11,6 @@ const main = async () => {
     console.log(secureEmail);
   });
 
-  const spotClient = new SpotClient();
-  // console.log(await spotClient.getPrice("TONUSDT"))
-  // await spotClient.createTestOrder({ baseAsset: "TON", quoteAsset: "USDT", side: "SELL", type: "MARKET" }); // [ALERT] This is a test order!!!
-
   const testHtmlString1 =
     '<br id="lineBreakAtBeginningOfMessage" /><br />Begin forwarded message:<br class="Apple-interchange-newline" /><span><b>From: </b></span><span>Verified Investing &lt;support@verifiedinvesting.com&gt;<br /></span><span><b>Subject: </b></span><span><b>Buy Alert: TON/USD</b><br /></span><span><b>Date: </b></span><span>4 December 2024 at 1:06:00 CET<br /></span><span><b>To: </b></span><span>trader@tony-masek.com<br /></span><span><b>Reply-To: </b></span><span>Verified Investing &lt;support@verifiedinvesting.com&gt;<br /></span><br /><h2 class="post-heading">Buy Alert: TON/USD</h2><p class="post-author-name">Gareth Soloway</p>Posted in Smart Money - Crypto Buy TON/USD  Entry: $6.77 (Approx 1.5% of Portfolio)  Stop: Confirmation Below $5.00  Target: $10.00  TRX/USD just popped 100%. Market cap wise it is the same as TRX just before the pop. Worth a sh... <p>Read more</p> Change notification settings<span class="Apple-converted-space"> </span>  <span class="Apple-converted-space"> </span>Unsubscribe from all emails<span class="Apple-converted-space"> </span><span></span><br />';
 
@@ -216,14 +212,29 @@ const main = async () => {
 '\n' +
 '\n' +
 '\n'`;
-  const validatedEmail = {
-    subject: "Short Alert: ETH/USD (Add)",
-    html: testHtmlString2
-  }
 
+  const validatedEmail = {
+    subject: "Buy Alert: TON/USD",
+    html: testHtmlString1,
+  };
   const tradeData = TradeDataExtractor.extractTradeData(validatedEmail);
   console.log(tradeData);
 
+  tradeData.clientType === "FUTURES" ? testFutures(tradeData) : testSpot(tradeData);
+};
+
+const testFutures = async (tradeData) => {
+  const futuresClient = new FuturesClient();
+
+  const tradeRes = await futuresClient.enqueueFuturesOrders(tradeData);
+  console.log("TRADE_RES => ", tradeRes);
+};
+
+const testSpot = async (tradeData) => {
+  const spotClient = new SpotClient();
+
+  const tradeRes = await spotClient.executeTrade(tradeData);
+  console.log("TRADE_RES => ", tradeRes);
 };
 
 main();

@@ -12,7 +12,6 @@ export default class EmailValidator {
 
   static #validateAddressFrom(addressFrom) {
     const allowedDomains = ["tony-masek.com", process.env.TRADER_DOMAIN];
-    console.log(process.env.TRADER_DOMAIN);
 
     const domain = addressFrom.value[0].address.split("@")[1];
     return allowedDomains.includes(domain);

@@ -1,10 +1,8 @@
-// [NOTE] THE SYNTAX TO CREATE BINANCE API CALLS IS => this.client.funcName({ paramsInAnObject: paramsInAnObject })
-
-// [NOTE] For a trade I need base symbol, quote symbol, type of trade
-
 import { MainClient } from "binance";
 import { binanceConfig } from "../../../config/binance.js";
 import TradeValidator from "../tradeValidator.js";
+import { getQuantity } from "../utils.js";
+
 
 export default class SpotClient {
   constructor() {
@@ -12,52 +10,47 @@ export default class SpotClient {
     this.validator = new TradeValidator();
   }
 
-  executeTrade(tradeData = {}) {
-    // const tradeType = this.#chooseTradeType(tradeData);
+  async executeTrade(tradeData) {
+    const results = await Promise.all(
+      tradeData.orders.map((order) => this.createTestOrder(order))
+    );
+    console.log("Results of promises => ", results);
   }
 
-  executeBuyOrder() {
-
-  }
+  enqueueBuyOrders() {}
 
   executeSellOrder() {
     // First Market order to sell/cover
-    // Cancel all orders on this symbol to clean stop loss targets entries etc.
+    // Cancel all orders on this symbol to clean stop loss, targets, entries, etc.
   }
 
   // [ALERT] ONLY TEST ORDER
-  async createTestOrder(tradeData = {}) {
-    const symbol = `${tradeData.baseAsset}${tradeData.quoteAsset}`; // When buying BTC symbol === "BTCUSDT"
-    console.log("Symbol: ", symbol);
-
+  async createTestOrder(order) {
     try {
-      const price = await this.getPrice(symbol);
-      console.log("Price works");
-
-      // const qntyQuoteAsset = await this.#getQnty(price, tradeData.quoteAsset);
-
-      const tradeDataObj = {
-        side: tradeData.side,
-        symbol: symbol,
-        type: tradeData.type,
-        quoteOrderQty: qntyQuoteAsset,
-        newOrderRespType: "RESULT",
+      const orderDataObj = {
+        ...order,
         computeCommissionRates: true,
+        newOrderRespType: "RESULT",
+        quantity: await getQuantity(order, this.client, false),
       };
 
-      console.log("Before testing purposes change => ", tradeDataObj);
+      console.log("Qnty => ", orderDataObj.quantity);
 
-      tradeDataObj.quoteOrderQty = "100.0";
 
-      console.log("After testing purposes change => ", tradeDataObj);
+      if (orderDataObj.quantity == 0) orderDataObj.quantity = "100.0";
 
-      const validatnResObj = this.validator.validateSpotTradeData(tradeDataObj);
-      const validatnMsgsStr = validatnResObj.messages.join(", ");
 
-      if (validatnResObj.result.includes(false)) throw new Error(`Trade validation failed. Here is why: ${validatnMsgsStr}`);
+      // const validatnResObj = this.validator.validateSpotTradeData(orderDataObj);
+      // const validatnMsgsStr = validatnResObj.messages.join(", ");
+
+      // if (validatnResObj.result.includes(false)) {
+      //   throw new Error(
+      //     `Trade validation failed. Here is why: ${validatnMsgsStr}`
+      //   );
+      // }
 
       await this.client
-        .testNewOrder(tradeDataObj)
+        .testNewOrder(orderDataObj)
         .then((result) => {
           console.log("RESULT!!!!! => ", result);
         })
@@ -69,17 +62,6 @@ export default class SpotClient {
       console.log(err);
     }
   }
-
-  // async getPrice(symbol) {
-  //   try {
-  //     const priceFetch = await this.client.getSymbolPriceTicker({
-  //       symbol: symbol,
-  //     });
-  //     return parseFloat(priceFetch.price);
-  //   } catch (err) {
-  //     console.log(err);
-  //   }
-  // }
 
   // async #getQnty(quoteAsset) {
   //   try {

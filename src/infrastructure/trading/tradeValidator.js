@@ -1,3 +1,6 @@
+// Needs to validate quantity
+
+
 export default class TradeValidator {
   validateSpotTradeData(tradeData) {
     this.result = [];
@@ -10,8 +13,8 @@ export default class TradeValidator {
 
   validateQuantityQuoteAsset(tradeData) {
     if (
-      parseFloat(tradeData.quoteOrderQty) > 0 &&
-      typeof tradeData.quoteOrderQty === "string"
+      parseFloat(tradeData.quantity) > 0 &&
+      typeof tradeData.quantity === "string"
     ) {
       this.result.push(true);
       return;
