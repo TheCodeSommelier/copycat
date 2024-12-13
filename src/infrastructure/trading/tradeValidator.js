@@ -1,8 +1,7 @@
 // Needs to validate quantity
 
-
 export default class TradeValidator {
-  validateSpotTradeData(tradeData) {
+  validateTradeData(tradeData) {
     this.result = [];
     this.messages = [];
 
@@ -20,7 +19,7 @@ export default class TradeValidator {
       return;
     }
     this.messages.push(
-      "Quote Order Qty needs to be higher than 0 and needs to be a string!"
+      "Qty needs to be higher than 0 and needs to be a string!"
     );
     this.result.push(false);
   }
@@ -35,6 +34,22 @@ export default class TradeValidator {
     }
     this.messages.push(
       "Side needs to be either BUY or SELL and needs to be a string!"
+    );
+    this.result.push(false);
+  }
+
+  validateType(tradeData) {
+    if (
+      tradeData.type.test(
+        /LIMIT|STOP_LOSS|STOP_MARKET|TAKE_PROFIT_MARKET|TAKE_PROFIT|MARKET/g
+      ) &&
+      typeof tradeData.type === "string"
+    ) {
+      this.result.push(true);
+      return;
+    }
+    this.messages.push(
+      "Type needs to be either LIMIT, STOP_LOSS, STOP_MARKET, TAKE_PROFIT_MARKET, TAKE_PROFIT or MARKET and needs to be a string!"
     );
     this.result.push(false);
   }

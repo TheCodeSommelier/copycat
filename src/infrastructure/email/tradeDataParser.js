@@ -1,4 +1,5 @@
-// Define constants for better maintainability
+import { decode } from "html-entities";
+
 const ORDER_TYPES = {
   ENTRY: {
     FUTURES: "LIMIT",
@@ -27,7 +28,6 @@ const CLIENT_TYPES = {
 };
 
 export default class TradeDataExtractor {
-  // Price extraction patterns
   static PRICE_PATTERNS = {
     ENTRY: /Entry:\s+\$([0-9,]+(?:\.\d+)?)/i,
     STOP: /Stop:\s+\$([0-9,]+(?:\.\d+)?)/i,
@@ -40,8 +40,9 @@ export default class TradeDataExtractor {
   static extractTradeData(validatedEmail) {
     try {
       const { subject, html } = validatedEmail;
-      const side = this.extractSide(subject);
-      const coinSymbols = this.extractSymbol(subject);
+      const decodedSubject = decode(subject); // Needs to e decoded otherwise chars like "/" are all kinds of messed up
+      const side = this.extractSide(decodedSubject);
+      const coinSymbols = this.extractSymbol(decodedSubject);
       const symbol = coinSymbols.symbol;
       const isFutures = this.isFuturesTrade(side);
       const isShort = side === TRADE_SIDES.SHORT;
@@ -50,21 +51,19 @@ export default class TradeDataExtractor {
       const tradeData = {
         ...coinSymbols,
         clientType: isFutures ? CLIENT_TYPES.FUTURES : CLIENT_TYPES.SPOT,
+        tradeAction: side,
       };
 
       // Handle market orders (SELL/COVER)
       if (this.isMarketOrder(side)) {
         return {
           ...tradeData,
-          side: TRADE_SIDES.SELL,
+          side: isFutures ? TRADE_SIDES.BUY : TRADE_SIDES.SELL,
           type: "MARKET",
-          isHalf: this.isHalf(subject),
-          order: this.createCloseOrder({
+          isHalf: this.isHalf(decodedSubject),
+          orders: this.createCloseOrder({
             symbol,
-            html,
             isFutures,
-            isShort,
-            subject,
           }),
         };
       }
@@ -78,7 +77,6 @@ export default class TradeDataExtractor {
           html,
           isFutures,
           isShort,
-          subject,
         }),
       };
     } catch (error) {
@@ -86,15 +84,23 @@ export default class TradeDataExtractor {
     }
   }
 
-  static createCloseOrder({ symbol, html, isFutures, isShort, subject }) {
-    return {
-      symbol,
-      type: "MARKET",
-      side: isShort ? TRADE_SIDES.BUY : TRADE_SIDES.SELL,
-    };
+  /**
+   * Creates an array with one order to cover or sell open postions on the symbol
+   * @param {String} symbol - Symbol of the traded base and quote asset
+   * @param {Boolean} isFutures - True if trade is futures trade (Short or Cover)
+   * @returns {Array} - Returns an array of single order, because clients use .map to process orders.
+   */
+  static createCloseOrder({ symbol, isFutures }) {
+    return [
+      {
+        symbol,
+        type: "MARKET",
+        side: isFutures ? TRADE_SIDES.BUY : TRADE_SIDES.SELL,
+      },
+    ];
   }
 
-  static createOrders({ symbol, html, isFutures, isShort, subject }) {
+  static createOrders({ symbol, html, isFutures, isShort }) {
     const prices = this.extractPrices(html);
 
     return [
@@ -177,23 +183,26 @@ export default class TradeDataExtractor {
 
   static extractSymbol(subject) {
     const match = subject.match(this.PRICE_PATTERNS.SYMBOL);
-    if (!match?.[0]) {
+
+    if (!match || !match[0]) {
       throw new Error("Failed to extract symbol");
     }
 
     const [baseAsset, quoteAsset] = match[0].split("/");
     return {
       symbol: `${baseAsset}${quoteAsset === "USD" ? "USDT" : quoteAsset}`,
-      quoteAsset,
       baseAsset,
+      quoteAsset: `${quoteAsset === "USD" ? "USDT" : quoteAsset}`,
     };
   }
 
   static extractSide(subject) {
     const match = subject.match(this.PRICE_PATTERNS.SIDE);
-    if (!match?.[0]) {
+
+    if (!match || !match[0]) {
       throw new Error("Failed to extract trade side");
     }
+
     return match[0].toUpperCase();
   }
 

@@ -8,3 +8,7 @@ node_modules
 /logs/*
 
 .DS_Store
+
+credentials.json
+
+TODO.*

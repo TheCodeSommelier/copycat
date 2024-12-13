@@ -11,7 +11,7 @@ import { binanceConfig } from "../../config/binance.js";
  * @param {boolean} isFutures - True if using futures client, false for spot
  * @returns {Promise<number>} Quantity of assets that can be bought with available USDT
  */
-export async function getQuantity(orderData, isFutures) {
+export async function getQuantity(orderData, isFutures, isHalf) {
   let baseAssetPrice = 0.0;
 
   if (orderData.type !== "MARKET") {
@@ -23,7 +23,7 @@ export async function getQuantity(orderData, isFutures) {
   const usdtAmount = await _quoteAssetAmount();
   const quantity =
     usdtAmount === "0" ? 0 : usdtAmount / baseAssetPrice;
-  return quantity;
+  return isHalf ? quantity * 0.5 : quantity;
 }
 
 // Private functions
@@ -36,7 +36,7 @@ export async function getQuantity(orderData, isFutures) {
  * @private
  */
 async function _getPrice({ symbol, isFutures }) {
-  return isFutures ? await _futuresPrice(symbol) : await _spotPrice(symbol);
+  return isFutures ? await _futuresPrice({ symbol }) : await _spotPrice({ symbol });
 }
 
 /**

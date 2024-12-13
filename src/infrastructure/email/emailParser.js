@@ -45,12 +45,13 @@ export default class SecureEmailParser {
    */
   async parse(emailData) {
     console.log(`\nUnsanitized email html data => ${emailData.html}\n\n`);
-
     try {
       const validationResult = EmailValidator.validateEmail(emailData);
       const validatedEmail = {};
 
       if (!validationResult.includes(false)) {
+        console.log("validatedEmail => ", validatedEmail);
+
         validatedEmail.id = crypto.randomUUID();
         validatedEmail.timestamp = Date.now();
         validatedEmail.html = this.#secureHtml(emailData.html);

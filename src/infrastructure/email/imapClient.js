@@ -5,6 +5,10 @@ import SecureEmailParser from "./emailParser.js";
 import { imapConfig } from "../../config/imap.js";
 import { simpleParser } from "mailparser";
 
+/**
+ * The ImapClient inherits from the EventEmitter from the events lib.
+ * So that it is ale to emit events when a new email comes.
+ */
 export default class ImapClient extends EventEmitter {
   constructor() {
     super();
@@ -67,7 +71,6 @@ export default class ImapClient extends EventEmitter {
         return;
       }
 
-      // Listen for new emails
       this.imap.on("mail", () => {
         this.#fetchNewEmails(box.messages.total);
       });
@@ -86,10 +89,8 @@ export default class ImapClient extends EventEmitter {
       fetchEmail.on("message", (msg) => {
         msg.on("body", async (stream) => {
           try {
-            // First parse the raw email using mailparser
             const parsedEmail = await simpleParser(stream);
 
-            // Prepare the email data in the correct format
             const emailData = {
               text: parsedEmail.text,
               html: parsedEmail.html,
@@ -100,7 +101,6 @@ export default class ImapClient extends EventEmitter {
               date: parsedEmail.date,
             };
 
-            // Now pass the properly parsed email to SecureEmailParser
             const secureEmail = await this.emailParser.parse(emailData);
             this.emit("newEmail", secureEmail);
           } catch (error) {

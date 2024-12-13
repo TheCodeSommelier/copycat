@@ -1,10 +1,12 @@
 import { USDMClient } from "binance";
 import { binanceConfig } from "../../../config/binance.js";
 import { getQuantity } from "../utils.js";
+import TradeValidator from "../tradeValidator.js";
 
 export default class FuturesClient {
   constructor() {
     this.client = new USDMClient(binanceConfig);
+    this.validator = new TradeValidator();
   }
 
   async enqueueFuturesOrders(tradeData) {
@@ -21,28 +23,26 @@ export default class FuturesClient {
 
   async enqueueTestOrder(order = {}) {
     try {
-      const orderData = {
+      const orderDataObj = {
         ...order,
-        quantity: await getQuantity(order, this.client, true),
+        quantity: await getQuantity(order, true, this.tradeData.isHalf),
         computeCommissionRates: true,
         newOrderRespType: "RESULT",
       };
 
-      console.log("Qnty => ", orderData);
+      orderDataObj.quantity = "100.0";
 
-      if (orderData.quantity == 0) orderData.quantity = "100.0";
+      const validationObjRes = this.validator.validateTradeData(orderDataObj);
+      const validatnMsgsStr = validationObjRes.messages.join(", ");
 
-      // const validatnResObj = this.validator.validateSpotTradeData(tradeDataObj); // Needs to be different for futures
-      // const validatnMsgsStr = validatnResObj.messages.join(", ");
-
-      // if (validatnResObj.result.includes(false)) {
-      //   throw new Error(
-      //     `Trade validation failed. Here is why: ${validatnMsgsStr}`
-      //   );
-      // }
+      if (validationObjRes.result.includes(false)) {
+        throw new Error(
+          `Trade validation failed. Here is why: ${validatnMsgsStr}`
+        );
+      }
 
       return this.client
-        .testOrder(orderData)
+        .testOrder(orderDataObj)
         .then((result) => {
           return result;
         })

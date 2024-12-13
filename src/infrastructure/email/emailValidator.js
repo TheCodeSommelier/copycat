@@ -5,7 +5,7 @@ export default class EmailValidator {
   static validateEmail(emailData) {
     const result = [
       this.#validateAddressFrom(emailData.from),
-      validateEmailType(emailData.subject),
+      this.#validateEmailType(emailData.subject),
     ];
     return result;
   }
@@ -17,9 +17,13 @@ export default class EmailValidator {
     return allowedDomains.includes(domain);
   }
 
-  // Makes sure we only act upon the trade alerts
-  static validateEmailType(subject) {
+  /**
+   * Validates that the subject is of a trade alert email
+   * @param {String} subject - Subject of the email
+   * @returns {Boolean}
+   */
+  static #validateEmailType(subject) {
     const regex = /\w+\s+(alert|Alert):\s+\w{0,}\/\w{0,}/g;
-    return subject.test(regex);
+    return subject.match(regex)[0].length > 0;
   }
 }

@@ -14,29 +14,60 @@ A Node.js application that monitors an email inbox for trading instructions and 
 ## Project Structure
 ```
 trading-bot/
-├── src/
-│   ├── config/                # Configuration
-│   │
-│   ├── core/                  # Core business logic
-│   │   ├── entities/          # Business objects
-│   │   ├── ports/             # Interface definitions
-│   │   └── use-cases/         # Business use cases
-│   │
-│   ├── infrastructure/        # External implementations
-│   │   ├── email/             # Email handling
-│   │   ├── trading/           # Trading operations
-│   │   └── security/          # Security services
-│   │
-│   ├── services/              # Application services
-│   │   ├── emailService.js    # Email processing
-│   │   ├── tradingService.js  # Trading operations
-│   │   └── loggerService.js   # Logging utilities
-│   │
-│   ├── utils/                 # Utility functions
-│   └── app.js                 # Application entry
-│
-├── tests/                     # Test files
-└── [Configuration files]
+├── src
+├── app.js
+├── config
+│   ├── binance.js
+│   ├── email.js
+│   ├── imap.js
+│   ├── index.js
+│   └── trading.js
+├── core
+│   ├── entities
+│   │   ├── email.js
+│   │   ├── futuresTrade.js
+│   │   ├── index.js
+│   │   └── spotTrade.js
+│   ├── ports
+│   │   ├── emailPort.js
+│   │   ├── index.js
+│   │   └── tradingPort.js
+│   └── use-cases
+│       ├── executeTrade.js
+│       ├── index.js
+│       └── processEmail.js
+├── infrastructure
+│   ├── email
+│   │   ├── emailParser.js
+│   │   ├── emailValidator.js
+│   │   ├── imapClient.js
+│   │   ├── index.js
+│   │   └── tradeDataParser.js
+│   └── trading
+│       ├── binance
+│       │   ├── futuresClient.js
+│       │   └── spotClient.js
+│       ├── index.js
+│       ├── tradeValidator.js
+│       └── utils.js
+├── services
+│   ├── emailService.js
+│   ├── loggerService.js
+│   └── tradingService.js
+├── tests
+│   ├── integration
+│   └── unit
+│       ├── infrastructure
+│       └── services
+├── utils
+|   ├── errors.js
+|   ├── index.js
+|   └── validation.js
+├── .env
+├── .gitignore
+├── package-lock.json
+├── package.json
+└── README.md
 ```
 
 ## Architecture Overview
@@ -71,22 +102,19 @@ git clone https://github.com/TheCodeSommelier/copycat.git
 npm install
 
 # Create environment files
-cp .env.email .env.trading .env
+cp .env
 ```
 
 ### Configuration
-Create a `.env.email` file with the following variables:
+Create a `.env` file with the following variables:
 ```
 EMAIL_USER=your_email
 EMAIL_PASSWORD=your_password
 IMAP_HOST=imap.active24.com
 IMAP_PORT=993
-```
-Create a `.env.trading` file with the following variables:
-```
+
 BINANCE_API_KEY=your_binance_key
 BINANCE_API_SECRET=your_binance_secret
-ENCRYPTION_KEY=your-32-character-encryption-key
 ```
 
 ### Running the Application !!!TBD!!!
@@ -129,9 +157,6 @@ Price: 50000
 ```bash
 # Run all tests
 npm test
-
-# Run with coverage
-npm run test:coverage
 ```
 
 ## Development Commands
