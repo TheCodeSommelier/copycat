@@ -1,4 +1,5 @@
 import { decode } from "html-entities";
+import crypto from "crypto";
 
 const ORDER_TYPES = {
   ENTRY: {
@@ -34,7 +35,6 @@ export default class TradeDataExtractor {
     TARGET: /Target:\s+\$([0-9,]+(?:\.\d+)?)/i,
     SYMBOL: /(\p{Lu}+)\/(\p{Lu}+)/gu,
     SIDE: /short|buy|sell|cover/gi,
-    HALF: /half/gi,
   };
 
   static extractTradeData(validatedEmail) {
@@ -207,7 +207,7 @@ export default class TradeDataExtractor {
   }
 
   static isHalf(subject) {
-    return this.PRICE_PATTERNS.HALF.test(subject);
+    return /half/i.test(subject);
   }
 
   static isFuturesTrade(side) {

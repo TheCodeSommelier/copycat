@@ -12,3 +12,7 @@ node_modules
 credentials.json
 
 TODO.*
+
+test_html_files/
+
+coverage

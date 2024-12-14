@@ -2,7 +2,6 @@ import EmailValidator from "./emailValidator.js";
 import crypto from "crypto";
 import validator from "validator";
 import sanitizeHtml from "sanitize-html";
-import TradeDataExtractor from "./tradeDataParser.js";
 
 export default class SecureEmailParser {
   sanitizeOptions = {
@@ -44,18 +43,16 @@ export default class SecureEmailParser {
    * @throws {Error} If validation or parsing fails
    */
   async parse(emailData) {
-    console.log(`\nUnsanitized email html data => ${emailData.html}\n\n`);
+    // console.log(`\nUnsanitized email html data => ${emailData.html}\n\n`);
     try {
       const validationResult = EmailValidator.validateEmail(emailData);
       const validatedEmail = {};
 
       if (!validationResult.includes(false)) {
-        console.log("validatedEmail => ", validatedEmail);
-
         validatedEmail.id = crypto.randomUUID();
         validatedEmail.timestamp = Date.now();
-        validatedEmail.html = this.#secureHtml(emailData.html);
-        validatedEmail.text = this.#secureText(emailData.text);
+        validatedEmail.html = this.#secureHtml(emailData.html?.trim());
+        validatedEmail.text = this.#secureText(emailData.text?.trim());
         validatedEmail.to = this.#secureAddress(emailData.to);
         validatedEmail.from = this.#secureAddress(emailData.from);
         validatedEmail.subject = this.#secureText(emailData.subject);
@@ -63,12 +60,11 @@ export default class SecureEmailParser {
         throw new Error("Validation failed");
       }
 
-      console.log(`\nSanitized email html data => ${validatedEmail.html}\n\n`);
+      // console.log(`\nSanitized email html data => ${validatedEmail.html}\n\n`);
 
       validatedEmail.emailHash = this.#generateHash(validatedEmail);
-      const tradeData = TradeDataExtractor.extractTradeData(validatedEmail);
 
-      return tradeData;
+      return validatedEmail;
     } catch (error) {
       // Log error securely (avoid exposing sensitive data)
       console.error("Email parsing error:", {
@@ -135,7 +131,7 @@ export default class SecureEmailParser {
         "[REMOVED]"
       )
       .replace(/on\w+=/gi, "[REMOVED]")
-      .replace(/&lt;script&gt;[\s\S]*?&lt;\/script&gt;/gi, "[REMOVED]");
+      .replace(/&lt;script&gt;[\s\S]*?&lt;\/script&gt;/i, "[REMOVED]");
 
     return secured;
   }
