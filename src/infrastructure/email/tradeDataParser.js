@@ -1,5 +1,4 @@
 import { decode } from "html-entities";
-import crypto from "crypto";
 
 const ORDER_TYPES = {
   ENTRY: {
@@ -40,7 +39,7 @@ export default class TradeDataExtractor {
   static extractTradeData(validatedEmail) {
     try {
       const { subject, html } = validatedEmail;
-      const decodedSubject = decode(subject); // Needs to e decoded otherwise chars like "/" are all kinds of messed up
+      const decodedSubject = decode(subject);
       const side = this.extractSide(decodedSubject);
       const coinSymbols = this.extractSymbol(decodedSubject);
       const symbol = coinSymbols.symbol;

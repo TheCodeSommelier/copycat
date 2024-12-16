@@ -2,6 +2,7 @@ import EmailValidator from "./emailValidator.js";
 import crypto from "crypto";
 import validator from "validator";
 import sanitizeHtml from "sanitize-html";
+import logger from "../../services/loggerService.js";
 
 export default class SecureEmailParser {
   sanitizeOptions = {
@@ -45,10 +46,16 @@ export default class SecureEmailParser {
   async parse(emailData) {
     // console.log(`\nUnsanitized email html data => ${emailData.html}\n\n`);
     try {
-      const validationResult = EmailValidator.validateEmail(emailData);
+      // Guard clause saying if not a trade alert email abort
+      if (!(/\w+\s+alert|Alert:\s+\w{0,}\/\w{0,}/g).test(emailData.subject)) {
+        logger.info("⚠️ This is not a trade alert email...");
+        return;
+      }
+
+      const validationResultObj = EmailValidator.validateEmail(emailData);
       const validatedEmail = {};
 
-      if (!validationResult.includes(false)) {
+      if (!validationResultObj.result.includes(false)) {
         validatedEmail.id = crypto.randomUUID();
         validatedEmail.timestamp = Date.now();
         validatedEmail.html = this.#secureHtml(emailData.html?.trim());
@@ -57,7 +64,8 @@ export default class SecureEmailParser {
         validatedEmail.from = this.#secureAddress(emailData.from);
         validatedEmail.subject = this.#secureText(emailData.subject);
       } else {
-        throw new Error("Validation failed");
+        const messages = validationResultObj.messages.join(", ");
+        throw new Error(`Here is what needs to be fixed:\n${messages}`);
       }
 
       // console.log(`\nSanitized email html data => ${validatedEmail.html}\n\n`);

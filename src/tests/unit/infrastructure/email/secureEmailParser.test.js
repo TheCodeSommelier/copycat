@@ -5,6 +5,7 @@ import TradeDataExtractor from "../../../../infrastructure/email/tradeDataParser
 import crypto from "crypto";
 import sinon from "sinon";
 import { fixtures } from "../../../helpers/emailParserFixtures.js";
+import logger from "../../../../services/loggerService.js";
 
 describe("SecureEmailParser", () => {
   let parser;
@@ -15,12 +16,13 @@ describe("SecureEmailParser", () => {
     clock = sinon.useFakeTimers(new Date("2024-01-01").getTime());
 
     // Stub dependencies
-    sinon.stub(EmailValidator, "validateEmail").returns([true]);
+    sinon.stub(EmailValidator, "validateEmail").returns({ result: [true] });
     sinon.stub(TradeDataExtractor, "extractTradeData").returns({
       symbol: "BTCUSDT",
       side: "BUY",
     });
     sinon.stub(crypto, "randomUUID").returns("test-uuid");
+    sinon.stub(logger, "info");
   });
 
   afterEach(() => {
@@ -31,6 +33,34 @@ describe("SecureEmailParser", () => {
   describe("parse()", () => {
     fixtures.forEach((fixture, index) => {
       describe(`Fixture ${index + 1}: ${fixture.subject}`, () => {
+        it(`should process email with valid trade alert subject: "${fixture.subject}"`, async () => {
+          const subject = fixture.subject.replace("/", "&#x2F;");
+          const result = await parser.parse(fixture);
+          expect(result).to.not.be.undefined;
+          expect(result.id).to.equal("test-uuid");
+          expect(result.subject).to.equal((subject));
+        });
+
+        it(`should not process email with invalid subject: "${fixture.subject}"`, async () => {
+          const invalidSubjects = [
+            "Crypto Update: BTC/USD",
+            "Market News: ETH/USD",
+            "Newsletter: Trading Tips",
+            "Random Subject",
+          ];
+          const emailData = {
+            ...fixture,
+            subject:
+              invalidSubjects[Math.random * (invalidSubjects.length - 1)],
+          };
+
+          const result = await parser.parse(emailData);
+          expect(result).to.be.undefined;
+          expect(logger.info).to.have.been.calledWith(
+            "⚠️ This is not a trade alert email..."
+          );
+        });
+
         it("should validate email data", async () => {
           await parser.parse(fixture);
           expect(EmailValidator.validateEmail.calledOnce).to.be.true;
@@ -38,7 +68,10 @@ describe("SecureEmailParser", () => {
         });
 
         it("should throw error for invalid email data", async () => {
-          EmailValidator.validateEmail.returns([false]);
+          EmailValidator.validateEmail.returns({
+            result: [false],
+            messages: ["Message here!"],
+          });
           await expect(parser.parse(fixture)).to.be.rejectedWith(
             "Failed to parse email securely"
           );
@@ -47,7 +80,9 @@ describe("SecureEmailParser", () => {
         it("should generate unique ID and timestamp", async () => {
           const parsedEmail = await parser.parse(fixture);
           expect(parsedEmail.id).to.equal("test-uuid");
-          expect(parsedEmail.timestamp).to.equal(new Date("2024-01-01").getTime());
+          expect(parsedEmail.timestamp).to.equal(
+            new Date("2024-01-01").getTime()
+          );
           expect(crypto.randomUUID.calledOnce).to.be.true;
         });
 
@@ -182,8 +217,9 @@ describe("SecureEmailParser", () => {
             const result1 = await parser.parse(fixture);
             const result2 = await parser.parse({
               ...fixture,
-              subject: "Different subject",
+              subject: "Buy Alert: SAY/USD",
             });
+
             expect(result1.emailHash).to.not.equal(result2.emailHash);
           });
         });

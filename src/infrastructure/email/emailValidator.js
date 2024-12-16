@@ -3,27 +3,38 @@ dotenv.config();
 
 export default class EmailValidator {
   static validateEmail(emailData) {
-    const result = [
-      this.#validateAddressFrom(emailData.from),
-      this.#validateEmailType(emailData.subject),
-    ];
-    return result;
+    const result = [];
+    const messages = [];
+
+    this.#validateAddressFrom(emailData.from, result, messages);
+    this.#validateEmailHtml(emailData.html, result, messages);
+
+    return { result, messages };
   }
 
-  static #validateAddressFrom(addressFrom) {
+  static #validateAddressFrom(addressFrom, result, messages) {
     const allowedDomains = ["tony-masek.com", process.env.TRADER_DOMAIN];
+    const email = addressFrom.value[0]?.address;
+    const domain = email ? email.split("@")[1] : "";
 
-    const domain = addressFrom.value[0].address.split("@")[1];
-    return allowedDomains.includes(domain);
+    if (
+      allowedDomains.includes(domain) &&
+      typeof addressFrom === "object" &&
+      addressFrom.value.length !== 0
+    ) {
+      result.push(true);
+      return;
+    }
+    messages.push("Needs to come from the allowed sender!");
+    result.push(false);
   }
 
-  /**
-   * Validates that the subject is of a trade alert email
-   * @param {String} subject - Subject of the email
-   * @returns {Boolean}
-   */
-  static #validateEmailType(subject) {
-    const regex = /\w+\s+(alert|Alert):\s+\w{0,}\/\w{0,}/g;
-    return subject.match(regex)[0].length > 0;
+  static #validateEmailHtml(html, result, messages) {
+    if (html && html.length > 0 && typeof html === "string") {
+      result.push(true);
+      return;
+    }
+    messages.push("Html cannot be empty!!");
+    result.push(false);
   }
 }
