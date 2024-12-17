@@ -34,7 +34,6 @@ describe("SecureEmailParser", () => {
         it(`should process email with valid trade alert subject: "${fixture.subject}"`, async () => {
           const subject = fixture.subject.replace("&#x2F;", "/");
           const result = await parser.parse(fixture);
-          console.log("subject === Res", subject, " === ", result.subject);
 
           expect(result).to.not.be.undefined;
           expect(result.id).to.equal("test-uuid");

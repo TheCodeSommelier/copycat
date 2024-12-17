@@ -13,10 +13,7 @@ export default class ImapClient extends EventEmitter {
   constructor() {
     super();
     this.imap = new Imap(imapConfig);
-    this.emailParser = new SecureEmailParser({
-      allowedDomains: ["tony-masek.com"], // Any allowed sender domains here
-      maxSize: 15 * 1024 * 1024, // 15MB
-    });
+    this.emailParser = new SecureEmailParser();
     this.setupEventListeners();
   }
 
@@ -89,16 +86,20 @@ export default class ImapClient extends EventEmitter {
       fetchEmail.on("message", (msg) => {
         msg.on("body", async (stream) => {
           try {
-            const parsedEmail = await simpleParser(stream);
+            console.log("stream => ", stream);
+
+            const preParsedEmail = await simpleParser(stream);
+
+            console.log("Parsed email => ", preParsedEmail);
 
             const emailData = {
-              text: parsedEmail.text,
-              html: parsedEmail.html,
-              subject: parsedEmail.subject,
-              from: parsedEmail.from,
-              to: parsedEmail.to,
-              attachments: parsedEmail.attachments,
-              date: parsedEmail.date,
+              text: preParsedEmail.text,
+              html: preParsedEmail.html,
+              subject: preParsedEmail.subject,
+              from: preParsedEmail.from,
+              to: preParsedEmail.to,
+              attachments: preParsedEmail.attachments,
+              date: preParsedEmail.date,
             };
 
             const secureEmail = await this.emailParser.parse(emailData);
