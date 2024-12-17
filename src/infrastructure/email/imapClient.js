@@ -1,7 +1,7 @@
 import Imap from "imap";
 import EventEmitter from "events";
 import logger from "../../services/loggerService.js";
-import SecureEmailParser from "./emailParser.js";
+import SecureEmailParser from "./secureEmailParser.js";
 import { imapConfig } from "../../config/imap.js";
 import { simpleParser } from "mailparser";
 

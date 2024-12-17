@@ -1,4 +1,4 @@
-import EmailValidator from "./emailValidator.js";
+import Email from "../../core/entities/email.js";
 import crypto from "crypto";
 import validator from "validator";
 import sanitizeHtml from "sanitize-html";
@@ -47,32 +47,32 @@ export default class SecureEmailParser {
     // console.log(`\nUnsanitized email html data => ${emailData.html}\n\n`);
     try {
       // Guard clause saying if not a trade alert email abort
-      if (!(/\w+\s+alert|Alert:\s+\w{0,}\/\w{0,}/g).test(emailData.subject)) {
+      if (!/\w+\s+alert|Alert:\s+\w{0,}\/\w{0,}/g.test(emailData.subject)) {
         logger.info("⚠️ This is not a trade alert email...");
         return;
       }
 
-      const validationResultObj = EmailValidator.validateEmail(emailData);
-      const validatedEmail = {};
+      const emailConstructionObj = {
+        id: crypto.randomUUID(),
+        html: this.#secureHtml(emailData.html?.trim()),
+        text: this.#secureText(emailData.text?.trim()),
+        to: this.#secureAddress(emailData.to),
+        from: this.#secureAddress(emailData.from),
+        subject: this.#secureText(emailData.subject),
+        emailHash: this.#generateHash(emailData),
+      };
 
-      if (!validationResultObj.result.includes(false)) {
-        validatedEmail.id = crypto.randomUUID();
-        validatedEmail.timestamp = Date.now();
-        validatedEmail.html = this.#secureHtml(emailData.html?.trim());
-        validatedEmail.text = this.#secureText(emailData.text?.trim());
-        validatedEmail.to = this.#secureAddress(emailData.to);
-        validatedEmail.from = this.#secureAddress(emailData.from);
-        validatedEmail.subject = this.#secureText(emailData.subject);
-      } else {
-        const messages = validationResultObj.messages.join(", ");
+      // console.log("emailConstructionObj => ", emailConstructionObj);
+
+      const email = Email.fromEmailData(emailConstructionObj);
+      const validationResult = email.validate();
+
+      if (validationResult.result.includes(false)) {
+        const messages = validationResult.messages.join(", ");
         throw new Error(`Here is what needs to be fixed:\n${messages}`);
       }
 
-      // console.log(`\nSanitized email html data => ${validatedEmail.html}\n\n`);
-
-      validatedEmail.emailHash = this.#generateHash(validatedEmail);
-
-      return validatedEmail;
+      return email;
     } catch (error) {
       // Log error securely (avoid exposing sensitive data)
       console.error("Email parsing error:", {

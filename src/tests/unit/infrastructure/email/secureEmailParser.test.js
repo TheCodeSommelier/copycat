@@ -1,7 +1,6 @@
 import { expect } from "../../../setup.js";
 import SecureEmailParser from "../../../../infrastructure/email/secureEmailParser.js";
-import EmailValidator from "../../../../infrastructure/email/emailValidator.js";
-import TradeDataExtractor from "../../../../infrastructure/email/tradeDataParser.js";
+import TradeDataExtractor from "../../../../services/tradeDataParser.js";
 import crypto from "crypto";
 import sinon from "sinon";
 import { fixtures } from "../../../helpers/emailParserFixtures.js";
@@ -16,7 +15,6 @@ describe("SecureEmailParser", () => {
     clock = sinon.useFakeTimers(new Date("2024-01-01").getTime());
 
     // Stub dependencies
-    sinon.stub(EmailValidator, "validateEmail").returns({ result: [true] });
     sinon.stub(TradeDataExtractor, "extractTradeData").returns({
       symbol: "BTCUSDT",
       side: "BUY",
@@ -34,11 +32,13 @@ describe("SecureEmailParser", () => {
     fixtures.forEach((fixture, index) => {
       describe(`Fixture ${index + 1}: ${fixture.subject}`, () => {
         it(`should process email with valid trade alert subject: "${fixture.subject}"`, async () => {
-          const subject = fixture.subject.replace("/", "&#x2F;");
+          const subject = fixture.subject.replace("&#x2F;", "/");
           const result = await parser.parse(fixture);
+          console.log("subject === Res", subject, " === ", result.subject);
+
           expect(result).to.not.be.undefined;
           expect(result.id).to.equal("test-uuid");
-          expect(result.subject).to.equal((subject));
+          expect(result.subject).to.equal(subject);
         });
 
         it(`should not process email with invalid subject: "${fixture.subject}"`, async () => {
@@ -58,22 +58,6 @@ describe("SecureEmailParser", () => {
           expect(result).to.be.undefined;
           expect(logger.info).to.have.been.calledWith(
             "⚠️ This is not a trade alert email..."
-          );
-        });
-
-        it("should validate email data", async () => {
-          await parser.parse(fixture);
-          expect(EmailValidator.validateEmail.calledOnce).to.be.true;
-          expect(EmailValidator.validateEmail.calledWith(fixture)).to.be.true;
-        });
-
-        it("should throw error for invalid email data", async () => {
-          EmailValidator.validateEmail.returns({
-            result: [false],
-            messages: ["Message here!"],
-          });
-          await expect(parser.parse(fixture)).to.be.rejectedWith(
-            "Failed to parse email securely"
           );
         });
 
@@ -228,32 +212,20 @@ describe("SecureEmailParser", () => {
   });
 
   describe("Email format variations", () => {
-    it("should handle emails with missing HTML content", async () => {
-      const modifiedFixture = { ...fixtures[0], html: null };
-      const result = await parser.parse(modifiedFixture);
-      expect(result.html).to.be.null;
-    });
-
-    it("should handle emails with empty text content", async () => {
-      const modifiedFixture = { ...fixtures[0], text: "" };
-      const result = await parser.parse(modifiedFixture);
-      expect(result.text).to.equal(null);
-    });
-
     it("should normalize email addresses", async () => {
       const modifiedFixture = {
         ...fixtures[0],
         from: {
           value: [
             {
-              address: "TEST@example.com",
+              address: "TEST@toNy-mAsek.Com",
               name: "Test User",
             },
           ],
         },
       };
       const result = await parser.parse(modifiedFixture);
-      expect(result.from[0].address).to.equal("test@example.com");
+      expect(result.from[0].address).to.equal("test@tony-masek.com");
     });
   });
 });

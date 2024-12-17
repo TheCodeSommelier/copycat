@@ -1,5 +1,3 @@
-import { decode } from "html-entities";
-
 const ORDER_TYPES = {
   ENTRY: {
     FUTURES: "LIMIT",
@@ -27,7 +25,7 @@ const CLIENT_TYPES = {
   SPOT: "SPOT",
 };
 
-export default class TradeDataExtractor {
+export default class TradeDataParser {
   static PRICE_PATTERNS = {
     ENTRY: /Entry:\s+\$([0-9,]+(?:\.\d+)?)/i,
     STOP: /Stop:\s+\$([0-9,]+(?:\.\d+)?)/i,
@@ -36,19 +34,19 @@ export default class TradeDataExtractor {
     SIDE: /short|buy|sell|cover/gi,
   };
 
-  static extractTradeData(validatedEmail) {
+  static extractTradeData(email) {
     try {
-      const { subject, html } = validatedEmail;
-      const decodedSubject = decode(subject);
-      const side = this.extractSide(decodedSubject);
-      const coinSymbols = this.extractSymbol(decodedSubject);
-      const symbol = coinSymbols.symbol;
+      const subject = email.getSubject();
+      const html = email.getHtml();
+      const side = this.extractSide(subject);
+      const tradeSymbols = this.extractSymbol(subject);
+      const symbol = tradeSymbols.symbol;
       const isFutures = this.isFuturesTrade(side);
       const isShort = side === TRADE_SIDES.SHORT;
 
       // Base trade data
       const tradeData = {
-        ...coinSymbols,
+        ...tradeSymbols,
         clientType: isFutures ? CLIENT_TYPES.FUTURES : CLIENT_TYPES.SPOT,
         tradeAction: side,
       };

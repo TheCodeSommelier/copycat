@@ -1,5 +1,5 @@
 import { ImapClient } from "./infrastructure/email/index.js";
-import TradeDataExtractor from "./infrastructure/email/tradeDataParser.js";
+import TradeDataParser from "./services/tradeDataParser.js";
 import { SpotClient, FuturesClient } from "./infrastructure/trading/index.js";
 import chalk from "chalk";
 import dotenv from "dotenv";
@@ -11,7 +11,7 @@ const main = async () => {
 
   imapClient.on("newEmail", async (securedEmail) => {
     console.log(chalk.green.bold("📩 New email is here!"));
-    const tradeData = TradeDataExtractor.extractTradeData(securedEmail);
+    const tradeData = TradeDataParser.extractTradeData(securedEmail);
     console.log(chalk.underline.cyan("And here is the parsed data:\n"), tradeData);
     const shouldTrade = process.env.TRADING_ACTIVE === "true";
     const isFutures = tradeData.clientType === "FUTURES";
