@@ -7,7 +7,6 @@ import dotenv from "dotenv";
 import pd from "pretty-data";
 dotenv.config();
 
-// Hey one more time...
 const main = async () => {
   const imapClient = new ImapClient();
   await imapClient.connect();
