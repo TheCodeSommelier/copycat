@@ -20,7 +20,7 @@ export default class SpotClient {
     }
   }
 
-  async openPositions(order) {
+  async openPosition(order) {
     const orderDataObj = {
       ...order,
       quantity: await getQuantity(order, false, this.tradeData.isHalf),
