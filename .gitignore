@@ -3,3 +3,16 @@ node_modules
 # Ignore all of the secrets files
 .env.*
 .env
+
+/logs
+/logs/*
+
+.DS_Store
+
+credentials.json
+
+TODO.*
+
+test_html_files/
+
+coverage

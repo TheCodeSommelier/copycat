@@ -1,16 +1,19 @@
 import Imap from "imap";
+import EventEmitter from "events";
 import logger from "../../services/loggerService.js";
-import SecureEmailParser from "./emailParser.js";
-import { imapConfig } from "../../../config.js";
+import SecureEmailParser from "./secureEmailParser.js";
+import { imapConfig } from "../../config/imap.js";
 import { simpleParser } from "mailparser";
 
-export default class ImapClient {
+/**
+ * The ImapClient inherits from the EventEmitter from the events lib.
+ * So that it is ale to emit events when a new email comes.
+ */
+export default class ImapClient extends EventEmitter {
   constructor() {
+    super();
     this.imap = new Imap(imapConfig);
-    this.emailParser = new SecureEmailParser({
-      allowedDomains: ["tony-masek.com"], // Any allowed sender domains here
-      maxSize: 15 * 1024 * 1024, // 15MB
-    });
+    this.emailParser = new SecureEmailParser();
     this.setupEventListeners();
   }
 
@@ -36,12 +39,12 @@ export default class ImapClient {
     });
 
     this.imap.on("close", (hadError) => {
-      logger.info("🔒 IMAP connection closed", { hadError });
+      logger.warn("🔒 IMAP connection closed", { hadError });
     });
 
     this.imap.on("ready", () => {
       logger.info("✅ You are in bud!");
-      this.watchInbox(this.emailHandler);
+      this.watchInbox();
       logger.info("👀 Watching the inbox!");
     });
 
@@ -58,77 +61,64 @@ export default class ImapClient {
     });
   }
 
-  emailHandler(err, email) {
-    if (err) {
-      console.error("Error processing email:", err);
-      return;
-    }
-
-    console.log("New Email Received:");
-    console.log("From:", email.from);
-    console.log("Subject:", email.subject);
-    console.log("Text:", email.text);
-    console.log("HTML:", email.html);
-  }
-
-  watchInbox(callback) {
+  watchInbox() {
     this.imap.openBox("INBOX", false, (err, box) => {
       if (err) {
         logger.error("Error opening inbox:", err);
         return;
       }
 
-      // Listen for new emails
       this.imap.on("mail", () => {
-        this.#fetchNewEmails(box.messages.total, callback);
+        this.#fetchNewEmails(box.messages.total);
       });
     });
   }
 
   // Private functions
 
-  async #fetchNewEmails(numNew, callback) {
+  async #fetchNewEmails(numNew) {
     try {
       const fetchEmail = this.imap.seq.fetch(`${numNew}:*`, {
-        bodies: "",  // Fetch the entire message
+        bodies: "", // Fetch the entire message
         struct: true,
       });
 
       fetchEmail.on("message", (msg) => {
         msg.on("body", async (stream) => {
           try {
-            // First parse the raw email using mailparser
-            const parsedEmail = await simpleParser(stream);
+            const preParsedEmail = await simpleParser(stream);
 
-            // Prepare the email data in the correct format
+            logger.info("Parsed email => ", preParsedEmail);
+
             const emailData = {
-              text: parsedEmail.text,
-              html: parsedEmail.html,
-              subject: parsedEmail.subject,
-              from: parsedEmail.from,
-              to: parsedEmail.to,
-              attachments: parsedEmail.attachments,
-              date: parsedEmail.date
+              text: preParsedEmail.text,
+              html: preParsedEmail.html,
+              subject: preParsedEmail.subject,
+              from: preParsedEmail.from,
+              to: preParsedEmail.to,
+              attachments: preParsedEmail.attachments,
+              date: preParsedEmail.date,
             };
 
-            // Now pass the properly parsed email to SecureEmailParser
+            // Guard clause saying if not a trade alert email abort
+            if (!/\w+\s+alert|Alert:\s+\w{0,}\/\w{0,}/g.test(emailData.subject)) {
+              logger.info("⚠️ This is not a trade alert email...");
+              return;
+            }
+
             const secureEmail = await this.emailParser.parse(emailData);
-            callback(null, secureEmail);
+            this.emit("newEmail", secureEmail);
           } catch (error) {
             logger.error("Error parsing email:", error);
-            callback(error);
           }
         });
       });
 
       fetchEmail.once("error", (err) => {
         logger.error("Fetch error:", err);
-        callback(err);
       });
-
     } catch (error) {
       logger.error("Fatal fetch error:", error);
-      callback(error);
     }
   }
 }

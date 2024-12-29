@@ -4,26 +4,32 @@
   "main": "./src/app.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "copy-trades": "pm2 start ./src/app.js",
-    "logs": "pm2 logs",
-    "stop-trades": "pm2 stop ./src/app.js",
-    "restart-trades": "pm2 restart ./src/app.js"
+    "test": "mocha",
+    "dev": "NODE_ENV=development node src/app.js"
   },
   "author": "Tony Masek",
   "license": "MIT",
   "description": "",
   "dependencies": {
-    "@binance/connector": "^3.5.0",
-    "awilix": "^12.0.3",
+    "binance": "^2.13.18",
+    "chalk": "^5.3.0",
     "dotenv": "^16.4.5",
+    "events": "^3.3.0",
+    "html-entities": "^2.5.2",
     "imap": "^0.8.19",
+    "jsdom": "^25.0.1",
     "mailparser": "^3.7.1",
-    "nodemon": "^3.1.7",
-    "rxjs": "^7.8.1",
+    "pretty-data": "^0.40.0",
     "sanitize-html": "^2.13.1",
     "validator": "^13.12.0",
-    "winston": "^3.17.0",
-    "zod": "^3.23.8"
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "chai": "^5.1.2",
+    "chai-as-promised": "^8.0.1",
+    "esm": "^3.2.25",
+    "mocha": "^8.3.0",
+    "sinon": "^19.0.2",
+    "sinon-chai": "^4.0.0"
   }
 }
