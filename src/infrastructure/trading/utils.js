@@ -1,5 +1,6 @@
 import { MainClient, USDMClient } from "binance";
 import { binanceConfig } from "../../config/binance.js";
+import logger from "../../services/loggerService.js";
 
 /**
  * Calculate the quantity of assets to buy based on order data and available USDT
@@ -50,7 +51,7 @@ async function _futuresPrice({ symbol }) {
   return await client
     .getMarkPrice({ symbol: symbol })
     .then((result) => parseFloat(result.indexPrice))
-    .catch((err) => console.log(err));
+    .catch((err) => logger.error(err));
 }
 
 /**
@@ -64,7 +65,7 @@ async function _spotPrice({ symbol }) {
   return await client
     .getSymbolPriceTicker({ symbol: symbol })
     .then((result) => parseFloat(result.price))
-    .catch((err) => console.log(err));
+    .catch((err) => logger.error(err));
 }
 
 /**

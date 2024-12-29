@@ -1,6 +1,7 @@
 import { USDMClient } from "binance";
 import { binanceConfig } from "../../../config/binance.js";
 import { getQuantity } from "../utils.js";
+import logger from "../../../services/loggerService.js";
 import TradeValidator from "../tradeValidator.js";
 
 export default class FuturesClient {
@@ -17,7 +18,7 @@ export default class FuturesClient {
       );
       return result;
     } catch (err) {
-      console.log(err);
+      logger.error(err);
     }
   }
 
@@ -46,9 +47,9 @@ export default class FuturesClient {
         .then((result) => {
           return result;
         })
-        .catch((err) => console.log(err));
+        .catch((err) => logger.info(err));
     } catch (err) {
-      console.log(err);
+      logger.error(err);
     }
   }
 }

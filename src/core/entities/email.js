@@ -16,19 +16,22 @@ export default class Email {
     this.emailHash = emailHash;
   }
 
+  getAllData() {
+    return `
+    ID: ${this.id}
+    HTML: ${this.html}
+    Text: ${this.text}
+    From: ${this.from}
+    To: ${this.to}
+    Subject: ${this.subject}
+    Timestamp: ${this.timestamp}
+    Email hash: ${this.emailHash}
+    `
+  }
+
   validate() {
     const result = [];
     const messages = [];
-
-    // console.log("Id => ", this.id);
-    // console.log("html => ", this.html);
-    // console.log("text => ", this.text);
-    // console.log("from => ", this.from);
-    // console.log("to => ", this.to);
-    // console.log("subject => ", this.subject);
-    // console.log("timestamp => ", this.timestamp);
-    // console.log("emailHash => ", this.emailHash);
-
 
     this.#validateId(result, messages);
     this.#validateAddressFrom(result, messages);

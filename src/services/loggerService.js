@@ -30,17 +30,14 @@ class LoggerService {
       ],
     });
 
-    // Add console logging in development
-    if (process.env.NODE_ENV !== "production") {
-      this.logger.add(
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple()
-          ),
-        })
-      );
-    }
+    this.logger.add(
+      new winston.transports.Console({
+        format: winston.format.combine(
+          winston.format.colorize(),
+          winston.format.simple()
+        ),
+      })
+    );
   }
 
   info(message, meta = {}) {

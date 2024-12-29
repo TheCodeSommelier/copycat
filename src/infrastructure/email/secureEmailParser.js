@@ -44,14 +44,7 @@ export default class SecureEmailParser {
    * @throws {Error} If validation or parsing fails
    */
   async parse(emailData) {
-    // console.log(`\nUnsanitized email html data => ${emailData.html}\n\n`);
     try {
-      // Guard clause saying if not a trade alert email abort
-      if (!/\w+\s+alert|Alert:\s+\w{0,}\/\w{0,}/g.test(emailData.subject)) {
-        logger.info("⚠️ This is not a trade alert email...");
-        return;
-      }
-
       const emailConstructionObj = {
         id: crypto.randomUUID(),
         html: this.#secureHtml(emailData.html?.trim()),
@@ -62,8 +55,6 @@ export default class SecureEmailParser {
         emailHash: this.#generateHash(emailData),
       };
 
-      // console.log("emailConstructionObj => ", emailConstructionObj);
-
       const email = Email.fromEmailData(emailConstructionObj);
       const validationResult = email.validate();
 
@@ -72,14 +63,16 @@ export default class SecureEmailParser {
         throw new Error(`Here is what needs to be fixed:\n${messages}`);
       }
 
+      logger.info(`This is the email that came:\n${email.getAllData()}\n`);
+
       return email;
     } catch (error) {
       // Log error securely (avoid exposing sensitive data)
-      console.error("Email parsing error:", {
+      logger.error(`Email parsing error: \n${{
         errorType: error.constructor.name,
         message: error.message,
         timestamp: new Date().toISOString(),
-      });
+      }}\n`);
 
       throw new Error("Failed to parse email securely");
     }

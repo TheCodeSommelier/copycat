@@ -2,6 +2,7 @@ import { MainClient } from "binance";
 import { binanceConfig } from "../../../config/binance.js";
 import TradeValidator from "../tradeValidator.js";
 import { getQuantity } from "../utils.js";
+import logger from "../../../services/loggerService.js";
 
 export default class SpotClient {
   constructor() {
@@ -13,10 +14,29 @@ export default class SpotClient {
     const results = await Promise.all(
       tradeData.orders.map((order) => this.createTestOrder(order))
     );
-    console.log("Results of promises => ", results);
+    logger.info("Results of promises => ", results);
+    if (tradeData.tradeAction.match(/cover|sell/i) && !tradeData.isHalf) {
+      this.#cleanUpOrders(tradeData);
+    }
   }
 
-  enqueueBuyOrders() {}
+  async openPositions(order) {
+    const orderDataObj = {
+      ...order,
+      quantity: await getQuantity(order, false, this.tradeData.isHalf),
+      newOrderRespType: "FULL",
+    };
+
+    this.client
+      .submitNewOrder(orderDataObj)
+      .then((result) => {
+        logger.info("Result => ", result);
+        return result;
+      })
+      .catch((err) => {
+        logger.error(err);
+      });
+  }
 
   // [ALERT] ONLY TEST ORDER
   async createTestOrder(order) {
@@ -42,15 +62,18 @@ export default class SpotClient {
       return await this.client
         .testNewOrder(orderDataObj)
         .then((result) => {
-          console.log("RESULT!!!!! => ", result);
+          logger.info("RESULT!!!!! => ", result);
           return result;
         })
         .catch((err) => {
-          console.log(err);
+          logger.error(err);
         });
     } catch (err) {
-      console.error(err);
-      console.log(err);
+      logger.error(err);
     }
+  }
+
+  #cleanUpOrders(tradeData) {
+
   }
 }

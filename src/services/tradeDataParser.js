@@ -57,7 +57,7 @@ export default class TradeDataParser {
           ...tradeData,
           side: isFutures ? TRADE_SIDES.BUY : TRADE_SIDES.SELL,
           type: "MARKET",
-          isHalf: this.isHalf(decodedSubject),
+          isHalf: this.isHalf(subject),
           orders: this.createCloseOrder({
             symbol,
             isFutures,

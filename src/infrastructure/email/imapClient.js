@@ -39,7 +39,7 @@ export default class ImapClient extends EventEmitter {
     });
 
     this.imap.on("close", (hadError) => {
-      logger.info("🔒 IMAP connection closed", { hadError });
+      logger.warn("🔒 IMAP connection closed", { hadError });
     });
 
     this.imap.on("ready", () => {
@@ -86,11 +86,9 @@ export default class ImapClient extends EventEmitter {
       fetchEmail.on("message", (msg) => {
         msg.on("body", async (stream) => {
           try {
-            console.log("stream => ", stream);
-
             const preParsedEmail = await simpleParser(stream);
 
-            console.log("Parsed email => ", preParsedEmail);
+            logger.info("Parsed email => ", preParsedEmail);
 
             const emailData = {
               text: preParsedEmail.text,
@@ -101,6 +99,12 @@ export default class ImapClient extends EventEmitter {
               attachments: preParsedEmail.attachments,
               date: preParsedEmail.date,
             };
+
+            // Guard clause saying if not a trade alert email abort
+            if (!/\w+\s+alert|Alert:\s+\w{0,}\/\w{0,}/g.test(emailData.subject)) {
+              logger.info("⚠️ This is not a trade alert email...");
+              return;
+            }
 
             const secureEmail = await this.emailParser.parse(emailData);
             this.emit("newEmail", secureEmail);

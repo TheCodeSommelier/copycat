@@ -40,26 +40,6 @@ describe("SecureEmailParser", () => {
           expect(result.subject).to.equal(subject);
         });
 
-        it(`should not process email with invalid subject: "${fixture.subject}"`, async () => {
-          const invalidSubjects = [
-            "Crypto Update: BTC/USD",
-            "Market News: ETH/USD",
-            "Newsletter: Trading Tips",
-            "Random Subject",
-          ];
-          const emailData = {
-            ...fixture,
-            subject:
-              invalidSubjects[Math.random * (invalidSubjects.length - 1)],
-          };
-
-          const result = await parser.parse(emailData);
-          expect(result).to.be.undefined;
-          expect(logger.info).to.have.been.calledWith(
-            "⚠️ This is not a trade alert email..."
-          );
-        });
-
         it("should generate unique ID and timestamp", async () => {
           const parsedEmail = await parser.parse(fixture);
           expect(parsedEmail.id).to.equal("test-uuid");
