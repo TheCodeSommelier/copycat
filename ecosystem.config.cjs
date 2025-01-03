@@ -9,10 +9,7 @@ module.exports = {
       instances: 1,
       autorestart: true,
       max_memory_restart: "1G",
-      env: {
-        NODE_ENV: "production",
-        PORT: 3000,
-      },
+      env_file: ".env",
       error_file: "./logs/pm2/error.log",
       out_file: "./logs/pm2/output.log",
       time: true,

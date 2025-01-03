@@ -4,7 +4,6 @@ import { SpotClient, FuturesClient } from "./infrastructure/trading/index.js";
 import logger from "./services/loggerService.js";
 import chalk from "chalk";
 import dotenv from "dotenv";
-import pd from "pretty-data";
 dotenv.config();
 
 // One  more commnent
@@ -15,7 +14,7 @@ const main = async () => {
   imapClient.on("newEmail", async (securedEmail) => {
     logger.info(chalk.green.bold("📩 New email is here!"));
     const tradeData = TradeDataParser.extractTradeData(securedEmail);
-    logger.info(chalk.underline.cyan("And here is the parsed data:\n"), pd.json(tradeData));
+    logger.info(chalk.underline.cyan("And here is the parsed data:\n"), tradeData);
     const shouldTrade = process.env.TRADING_ACTIVE === "true";
     const isFutures = tradeData.clientType === "FUTURES";
     if (shouldTrade) {
