@@ -34,7 +34,7 @@ export default class TradeDataParser {
     SIDE: /short|buy|sell|cover/gi,
   };
 
-  static extractTradeData(email) {
+  static async extractTradeData(email) {
     try {
       const subject = email.getSubject();
       const html = email.getHtml();

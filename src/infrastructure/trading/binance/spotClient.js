@@ -11,6 +11,8 @@ export default class SpotClient {
   }
 
   async executeTrade(tradeData) {
+    this.tradeData = tradeData;
+
     const results = await Promise.all(
       tradeData.orders.map((order) => this.createTestOrder(order))
     );
@@ -66,14 +68,19 @@ export default class SpotClient {
           return result;
         })
         .catch((err) => {
-          logger.error(err);
+          logger.error("Fetch failure... ", err, {
+            symbol: order?.symbol,
+            orderType: order?.type,
+            stage: err.message.includes("validation")
+              ? "validation"
+              : "execution",
+          });
+          throw err;
         });
     } catch (err) {
-      logger.error(err);
+      logger.error("Major failure... ", err);
     }
   }
 
-  #cleanUpOrders(tradeData) {
-
-  }
+  #cleanUpOrders(tradeData) {}
 }

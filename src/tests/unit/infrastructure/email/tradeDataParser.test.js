@@ -1,5 +1,5 @@
 import { expect } from "../../../setup.js";
-import TradeDataParser from "../../../../services/tradeDataParser.js";
+import TradeDataParser from "../../../../services/TradeDataParser.js";
 
 describe("TradeDataParser", () => {
   describe("Symbol Extraction", () => {

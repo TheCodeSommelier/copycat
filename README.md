@@ -42,7 +42,7 @@ trading-bot/
 │   │   ├── emailValidator.js
 │   │   ├── imapClient.js
 │   │   ├── index.js
-│   │   └── tradeDataParser.js
+│   │   └── TradeDataParser.js
 │   └── trading
 │       ├── binance
 │       │   ├── futuresClient.js

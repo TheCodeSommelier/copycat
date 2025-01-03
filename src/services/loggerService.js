@@ -6,7 +6,12 @@ class LoggerService {
     const logFormat = winston.format.combine(
       winston.format.timestamp(),
       winston.format.errors({ stack: true }),
-      winston.format.json()
+      winston.format.printf(({ level, message, timestamp, ...meta }) => {
+        return `${timestamp} ${level}: ${message} ${
+          Object.keys(meta).length ?
+          JSON.stringify(meta, null, 2) : ''
+        }`;
+      })
     );
 
     this.logger = winston.createLogger({
@@ -45,9 +50,15 @@ class LoggerService {
   }
 
   error(message, error = null, meta = {}) {
+    const errorInfo = error ? {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    } : null;
+
     this.logger.error(message, {
       timestamp: new Date(),
-      error: error?.stack || error,
+      error: errorInfo,
       ...meta,
     });
   }

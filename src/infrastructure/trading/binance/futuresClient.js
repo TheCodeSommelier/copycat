@@ -47,9 +47,18 @@ export default class FuturesClient {
         .then((result) => {
           return result;
         })
-        .catch((err) => logger.info(err));
+        .catch((err) => {
+          logger.error("Fetch failure... ", err, {
+            symbol: order?.symbol,
+            orderType: order?.type,
+            stage: err.message.includes("validation")
+              ? "validation"
+              : "execution",
+          });
+          throw err;
+        });
     } catch (err) {
-      logger.error(err);
+      logger.error("Major failure... ", err);
     }
   }
 }
