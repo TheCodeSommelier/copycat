@@ -1,8 +1,10 @@
 import winston from "winston";
 import path from "path";
+import LoggerPort from "../../core/ports/loggerPort.js";
 
-class LoggerService {
+class Logger extends LoggerPort {
   constructor() {
+    super();
     const logFormat = winston.format.combine(
       winston.format.timestamp(),
       winston.format.errors({ stack: true }),
@@ -72,4 +74,4 @@ class LoggerService {
   }
 }
 
-export default new LoggerService();
+export default new Logger();

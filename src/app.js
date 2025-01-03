@@ -3,7 +3,7 @@ import { imapConfig } from "./config/imap.js";
 import EmailParser from "./infrastructure/email/emailParser.js";
 import TradeDataParser from "./infrastructure/email/tradeDataParser.js";
 import { SpotClient, FuturesClient } from "./infrastructure/trading/index.js";
-import logger from "./services/loggerService.js";
+import logger from "./infrastructure/logger/logger.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -16,7 +16,6 @@ const main = async () => {
   adapter.onTradeSignal(async (email) => {
     const tradeData = await TradeDataParser.extractTradeData(email);
     logger.info(`Here it is!`, tradeData);
-    console.log(tradeData);
 
     if (process.env.TRADING_ACTIVE === "true") {
       if (tradeData.clientType === "SPOT") {
@@ -24,6 +23,8 @@ const main = async () => {
       } else {
         await testFutures(tradeData);
       }
+    } else {
+      logger.warn("Trading is deactivated see the .env file...");
     }
   });
 };

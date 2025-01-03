@@ -1,6 +1,6 @@
 import { MainClient, USDMClient } from "binance";
 import { binanceConfig } from "../../config/binance.js";
-import logger from "../../services/loggerService.js";
+import logger from "../logger/logger.js";
 
 /**
  * Calculate the quantity of assets to buy based on order data and available USDT

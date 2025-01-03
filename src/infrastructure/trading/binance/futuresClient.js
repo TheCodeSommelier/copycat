@@ -1,7 +1,7 @@
 import { USDMClient } from "binance";
 import { binanceConfig } from "../../../config/binance.js";
 import { getQuantity } from "../utils.js";
-import logger from "../../../services/loggerService.js";
+import logger from "../../logger/logger.js";
 import TradeValidator from "../tradeValidator.js";
 
 export default class FuturesClient {

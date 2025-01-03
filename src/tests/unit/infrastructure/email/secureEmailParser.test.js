@@ -4,7 +4,7 @@ import TradeDataExtractor from "../../../../services/TradeDataParser.js";
 import crypto from "crypto";
 import sinon from "sinon";
 import { fixtures } from "../../../helpers/emailParserFixtures.js";
-import logger from "../../../../services/loggerService.js";
+import logger from "../../../../services/logger.js";
 
 describe("SecureEmailParser", () => {
   let parser;

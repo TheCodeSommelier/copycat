@@ -52,7 +52,7 @@ trading-bot/
 │       └── utils.js
 ├── services
 │   ├── emailService.js
-│   ├── loggerService.js
+│   ├── logger.js
 │   └── tradingService.js
 ├── tests
 │   ├── integration

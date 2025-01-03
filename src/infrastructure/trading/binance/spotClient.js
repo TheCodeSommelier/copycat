@@ -2,7 +2,7 @@ import { MainClient } from "binance";
 import { binanceConfig } from "../../../config/binance.js";
 import TradeValidator from "../tradeValidator.js";
 import { getQuantity } from "../utils.js";
-import logger from "../../../services/loggerService.js";
+import logger from "../../logger/logger.js";
 
 export default class SpotClient {
   constructor() {

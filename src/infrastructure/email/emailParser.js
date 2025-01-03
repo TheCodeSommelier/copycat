@@ -2,7 +2,7 @@ import Email from "../../core/entities/email.port.js";
 import crypto from "crypto";
 import validator from "validator";
 import sanitizeHtml from "sanitize-html";
-import logger from "../../services/loggerService.js";
+import logger from "../logger/logger.js";
 
 export default class EmailParser {
   sanitizeOptions = {
