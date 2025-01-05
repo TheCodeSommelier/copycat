@@ -1,5 +1,3 @@
-// Needs to validate quantity
-
 export default class TradeValidator {
   validateTradeData(tradeData) {
     this.result = [];

@@ -1,10 +1,10 @@
 import { MainClient } from "binance";
 import { binanceConfig } from "../../../config/binance.js";
 import TradeValidator from "../tradeValidator.js";
-import { getQuantity } from "../utils.js";
+import { getQuantity } from "./utils.js";
 import logger from "../../logger/logger.js";
 
-export default class SpotClient {
+export default class SpotAdapter {
   constructor() {
     this.client = new MainClient(binanceConfig);
     this.validator = new TradeValidator();
@@ -40,8 +40,7 @@ export default class SpotClient {
       });
   }
 
-  // [ALERT] ONLY TEST ORDER
-  async createTestOrder(order) {
+  async executeTestTrade(order) {
     try {
       const orderDataObj = {
         ...order,

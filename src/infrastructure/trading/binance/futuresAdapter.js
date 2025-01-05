@@ -1,16 +1,16 @@
 import { USDMClient } from "binance";
 import { binanceConfig } from "../../../config/binance.js";
-import { getQuantity } from "../utils.js";
+import { getQuantity } from "./utils.js";
 import logger from "../../logger/logger.js";
 import TradeValidator from "../tradeValidator.js";
 
-export default class FuturesClient {
+export default class FuturesAdapter {
   constructor() {
     this.client = new USDMClient(binanceConfig);
     this.validator = new TradeValidator();
   }
 
-  async enqueueFuturesOrders(tradeData) {
+  async executeTrade(tradeData) {
     this.tradeData = tradeData;
     try {
       const result = await Promise.all(
@@ -22,7 +22,7 @@ export default class FuturesClient {
     }
   }
 
-  async enqueueTestOrder(order = {}) {
+  async executeTestTrade(order = {}) {
     try {
       const orderDataObj = {
         ...order,
