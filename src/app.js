@@ -5,25 +5,24 @@ import TradeDataParser from "./infrastructure/email/tradeDataParser.js";
 import logger from "./infrastructure/logger/logger.js";
 import dotenv from "dotenv";
 import BinanceAdapter from "./infrastructure/trading/binance/binanceAdapter.js";
+import { tradeIsActive } from "./constants.js";
 dotenv.config();
 
 // One  more commnent
 const main = async () => {
   const emailParser = new EmailParser();
   const trader = new BinanceAdapter();
-  const adapter = new ImapAdapter(imapConfig, logger, emailParser);
+  const reciever = new ImapAdapter(imapConfig, logger, emailParser);
   const tradeParser = new TradeDataParser();
 
-  adapter.monitorEmails();
-  adapter.onTradeSignal(async (email) => {
+  console.log("Trade Is Active: ", tradeIsActive);
+
+  reciever.monitorEmails();
+  reciever.onTradeSignal(async (email) => {
     const tradeData = tradeParser.extractTradeData(email);
     logger.info(`Here it is!`, tradeData);
 
-    if (process.env.TRADING_ACTIVE === "true") {
-      trader.executeTestTrade(tradeData);
-    } else {
-      logger.warn("Trading is deactivated see the .env file...");
-    }
+    trader.executeTrade(tradeData);
   });
 };
 

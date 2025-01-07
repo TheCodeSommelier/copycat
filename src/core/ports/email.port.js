@@ -7,7 +7,7 @@ export class EmailPort {
     throw new Error("Not implemented");
   }
 
-  onTradeSignal(handler) {
+  onTradeSignal() {
     throw new Error("Not implemented");
   }
 

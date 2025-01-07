@@ -1,85 +1,95 @@
-import { MainClient } from "binance";
-import { binanceConfig } from "../../../config/binance.js";
-import TradeValidator from "../tradeValidator.js";
-import { getQuantity } from "./utils.js";
+import { tradeIsActive, spotUrl } from "../../../constants.js";
+import {
+  binanceConfigLive,
+  binanceConfigTestSpot,
+} from "../../../config/binance.js";
+import { getQuantity, getDataToSend, binanceApiCall } from "./utils.js";
 import logger from "../../logger/logger.js";
+import dotenv from "dotenv";
+import Trade from "../../../core/entities/trade.js";
+dotenv.config();
 
 export default class SpotAdapter {
   constructor() {
-    this.client = new MainClient(binanceConfig);
-    this.validator = new TradeValidator();
+    this.binanceConfig = tradeIsActive
+      ? binanceConfigLive
+      : binanceConfigTestSpot;
   }
 
   async executeTrade(tradeData) {
-    this.tradeData = tradeData;
-
     const results = await Promise.all(
-      tradeData.orders.map((order) => this.createTestOrder(order))
+      tradeData.orders.map((order) =>
+        this.#executeTestTrade(order, tradeData.isHalf)
+      )
     );
     logger.info("Results of promises => ", results);
-    if (tradeData.tradeAction.match(/cover|sell/i) && !tradeData.isHalf) {
-      this.#cleanUpOrders(tradeData);
+    if (tradeData.tradeAction.match(/cover|sell/i) && tradeData.isHalf) {
+      // updateOrderQuantity
+    } else {
+      // cleanUpOrders
     }
   }
 
-  async openPosition(order) {
-    const orderDataObj = {
-      ...order,
-      quantity: await getQuantity(order, false, this.tradeData.isHalf),
-      newOrderRespType: "FULL",
-    };
+  async #openPosition(order, isHalf) {
+    try {
+      const orderDataObj = {
+        ...order,
+        quantity: await getQuantity(order, false, isHalf),
+        newOrderRespType: "FULL",
+        timestamp: Date.now(),
+      };
 
-    this.client
-      .submitNewOrder(orderDataObj)
-      .then((result) => {
-        logger.info("Result => ", result);
-        return result;
-      })
-      .catch((err) => {
-        logger.error(err);
-      });
+      Trade.validateQuantityQuoteAsset(orderDataObj.quantity);
+
+      const { queryString, signature } = getDataToSend(
+        orderDataObj,
+        this.binanceConfig.api_secret
+      );
+
+      return await binanceApiCall(
+        `${spotUrl}/api/v3/order/test?${queryString}&signature=${signature}`,
+        "POST",
+        {
+          "X-MBX-APIKEY": this.binanceConfig.api_key,
+          "Content-Type": "application/json",
+        }
+      );
+    } catch (error) {
+      logger.error(error);
+      throw error;
+    }
   }
 
-  async executeTestTrade(order) {
+  async #executeTestTrade(order, isHalf) {
     try {
       const orderDataObj = {
         ...order,
         computeCommissionRates: true,
         newOrderRespType: "RESULT",
-        quantity: await getQuantity(order, false, this.tradeData.isHalf),
+        quantity: await getQuantity(order, false, isHalf),
+        timestamp: Date.now(),
       };
 
       orderDataObj.quantity = "100.0";
 
-      const validatnResObj = this.validator.validateTradeData(orderDataObj);
-      const validatnMsgsStr = validatnResObj.messages.join(", ");
+      Trade.validateQuantityQuoteAsset(orderDataObj.quantity);
 
-      if (validatnResObj.result.includes(false)) {
-        throw new Error(
-          `Trade validation failed. Here is why: ${validatnMsgsStr}`
-        );
-      }
+      const { queryString, signature } = getDataToSend(
+        orderDataObj,
+        this.binanceConfig.api_secret
+      );
 
-      return await this.client
-        .testNewOrder(orderDataObj)
-        .then((result) => {
-          logger.info("RESULT!!!!! => ", result);
-          return result;
-        })
-        .catch((err) => {
-          logger.error("Fetch failure... ", err, {
-            symbol: order?.symbol,
-            orderType: order?.type,
-            stage: err.message.includes("validation")
-              ? "validation"
-              : "execution",
-          });
-          throw err;
-        });
-    } catch (err) {
-      logger.error("Major failure... ", err);
+      return await binanceApiCall(
+        `${spotUrl}/api/v3/order/test?${queryString}&signature=${signature}`,
+        "POST",
+        {
+          "X-MBX-APIKEY": this.binanceConfig.api_key,
+          "Content-Type": "application/json",
+        }
+      );
+    } catch (error) {
+      logger.error(error);
+      throw error;
     }
   }
-
-  #cleanUpOrders(tradeData) {}
 }

@@ -1,4 +1,5 @@
 import Trade from "../../core/entities/trade.js";
+import logger from "../logger/logger.js";
 
 const ORDER_TYPES = {
   ENTRY: {
@@ -79,7 +80,7 @@ export default class TradeDataParser {
         }),
       });
     } catch (error) {
-      throw new Error(`Failed to extract trade data: ${error.message}`);
+      logger.error(error)
     }
   }
 

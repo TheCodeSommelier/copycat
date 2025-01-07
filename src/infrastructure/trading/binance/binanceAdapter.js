@@ -10,14 +10,10 @@ export default class BinanceAdapter extends TradingPort {
   }
 
   async executeTrade(tradeData) {
+    console.log(tradeData);
+
     return tradeData.clientType === "SPOT"
       ? this.spotAdapter.executeTrade(tradeData)
       : this.futuresAdapter.executeTrade(tradeData);
-  }
-
-  async executeTestTrade(tradeData) {
-    return tradeData.clientType === "SPOT"
-      ? this.spotAdapter.executeTestTrade(tradeData)
-      : this.futuresAdapter.executeTestTrade(tradeData);
   }
 }

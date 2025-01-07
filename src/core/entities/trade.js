@@ -1,7 +1,6 @@
 export default class Trade {
   constructor(data = {}) {
     this.#validateTradeData(data);
-
     this.symbol = data.symbol;
     this.baseAsset = data.baseAsset;
     this.quoteAsset = data.quoteAsset;
@@ -11,6 +10,17 @@ export default class Trade {
     this.stopLoss = data.stopLoss;
     this.tradeAction = data.tradeAction;
     this.orders = data.orders;
+    this.isHalf = data.isHalf || false;
+  }
+
+  static validateQuantityQuoteAsset(quantity) {
+    if (parseFloat(quantity) > 0 && typeof quantity === "string") {
+      return;
+    }
+
+    throw new Error(
+      `Order: Quantity needs to be higher than 0 and needs to be a string!`
+    );
   }
 
   #validateTradeData(data) {
@@ -21,7 +31,6 @@ export default class Trade {
     }
 
     data.orders.forEach((order, index) => {
-      this.#validateQuantityQuoteAsset(order, index);
       this.#validateSide(order, index);
       this.#validateType(order, index);
     });
@@ -41,16 +50,6 @@ export default class Trade {
     if (missing.length > 0) {
       throw new Error(`Missing required fields: ${missing.join(", ")}`);
     }
-  }
-
-  #validateQuantityQuoteAsset(order, index) {
-    if (parseFloat(order.quantity) > 0 && typeof order.quantity === "string") {
-      return;
-    }
-
-    throw new Error(
-      `Order ${index}: Quantity needs to be higher than 0 and needs to be a string!`
-    );
   }
 
   #validateSide(order, index) {

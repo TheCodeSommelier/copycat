@@ -1,64 +1,66 @@
-import { USDMClient } from "binance";
-import { binanceConfig } from "../../../config/binance.js";
-import { getQuantity } from "./utils.js";
+import { futuresUrl, tradeIsActive } from "../../../constants.js";
+import {
+  binanceConfigLive,
+  binanceConfigTestFutures,
+} from "../../../config/binance.js";
+import { getQuantity, getDataToSend, binanceApiCall } from "./utils.js";
 import logger from "../../logger/logger.js";
-import TradeValidator from "../tradeValidator.js";
+import Trade from "../../../core/entities/trade.js";
 
 export default class FuturesAdapter {
   constructor() {
-    this.client = new USDMClient(binanceConfig);
-    this.validator = new TradeValidator();
+    this.binanceConfig = tradeIsActive
+      ? binanceConfigLive
+      : binanceConfigTestFutures;
   }
 
   async executeTrade(tradeData) {
-    this.tradeData = tradeData;
-    try {
-      const result = await Promise.all(
-        this.tradeData.orders.map((order) => this.enqueueTestOrder(order))
-      );
-      return result;
-    } catch (err) {
-      logger.error(err);
+    const results = await Promise.all(
+      tradeData.orders.map((order) =>
+        this.#executeTestTrade(order, tradeData.isHalf)
+      )
+    );
+    logger.info("Results of promises => ", results);
+    if (tradeData.tradeAction.match(/cover|sell/i) && tradeData.isHalf) {
+      // updateOrderQuantity
+    } else {
+      // cleanUpOrders
     }
+    return results;
   }
 
-  async executeTestTrade(order = {}) {
+  // Private
+
+  async #executeTestTrade(order, isHalf) {
     try {
       const orderDataObj = {
         ...order,
-        quantity: await getQuantity(order, true, this.tradeData.isHalf),
+        quantity: await getQuantity(order, true, isHalf, this.client),
         computeCommissionRates: true,
         newOrderRespType: "RESULT",
+        timestamp: Date.now(),
       };
 
       orderDataObj.quantity = "100.0";
 
-      const validationObjRes = this.validator.validateTradeData(orderDataObj);
-      const validatnMsgsStr = validationObjRes.messages.join(", ");
+      Trade.validateQuantityQuoteAsset(orderDataObj.quantity);
 
-      if (validationObjRes.result.includes(false)) {
-        throw new Error(
-          `Trade validation failed. Here is why: ${validatnMsgsStr}`
-        );
-      }
+      const { queryString, signature } = getDataToSend(
+        orderDataObj,
+        this.binanceConfig.api_secret
+      );
 
-      return this.client
-        .testOrder(orderDataObj)
-        .then((result) => {
-          return result;
-        })
-        .catch((err) => {
-          logger.error("Fetch failure... ", err, {
-            symbol: order?.symbol,
-            orderType: order?.type,
-            stage: err.message.includes("validation")
-              ? "validation"
-              : "execution",
-          });
-          throw err;
-        });
-    } catch (err) {
-      logger.error("Major failure... ", err);
+      return await binanceApiCall(
+        `${futuresUrl}/fapi/v1/order/test?${queryString}&signature=${signature}`,
+        "POST",
+        {
+          "X-MBX-APIKEY": this.binanceConfig.api_key,
+          "Content-Type": "application/json",
+        }
+      );
+    } catch (error) {
+      logger.error(error);
+      throw error;
     }
   }
 }

@@ -1,19 +1,21 @@
 import { decode } from "html-entities";
 import dotenv from "dotenv";
+import logger from "../../infrastructure/logger/logger.js";
 dotenv.config();
 
 export default class Email {
   static allowedDomains = ["tony-masek.com", process.env.TRADER_DOMAIN];
 
-  constructor({ id, html, text, from, to, subject, timestamp, emailHash }) {
-    this.id = id;
-    this.html = html;
-    this.text = text;
-    this.from = from;
-    this.to = to;
-    this.subject = decode(subject);
-    this.timestamp = timestamp;
-    this.emailHash = emailHash;
+  constructor(data = {}) {
+    this.#validate(data);
+    this.id = data.id;
+    this.html = data.html;
+    this.text = data.text;
+    this.from = data.from;
+    this.to = data.to;
+    this.subject = decode(data.subject);
+    this.timestamp = Date.now();
+    this.emailHash = data.emailHash;
   }
 
   getAllData() {
@@ -26,171 +28,121 @@ export default class Email {
     Subject: ${this.subject}
     Timestamp: ${this.timestamp}
     Email hash: ${this.emailHash}
-    `
+    `;
   }
 
-  validate() {
-    const result = [];
-    const messages = [];
-
-    this.#validateId(result, messages);
-    this.#validateAddressFrom(result, messages);
-    this.#validateAddressTo(result, messages);
-    this.#validateEmailHtml(result, messages);
-    this.#validateText(result, messages);
-    this.#validateSubject(result, messages);
-    this.#validateTimestamp(result, messages);
-    this.#validateHash(result, messages);
-
-    return { result, messages };
+  #validate(data) {
+    this.#validateId(data);
+    this.#validateAddressFrom(data);
+    this.#validateAddressTo(data);
+    this.#validateEmailHtml(data);
+    this.#validateText(data);
+    this.#validateSubject(data);
+    this.#validateHash(data);
   }
 
-  #validateId(result, messages) {
-    if (!this.id || typeof this.id !== "string" || this.id.length < 1) {
-      messages.push("ID must be a non-empty string!");
-      result.push(false);
-      return;
+  #validateId(data) {
+    try {
+      if (!data.id || typeof data.id !== "string" || data.id.length < 1) {
+        throw new Error("ID must be a non-empty string!");
+      }
+    } catch (error) {
+      logger.error(error);
     }
-    result.push(true);
   }
 
-  #validateAddressFrom(result, messages) {
-    const email = this.from[0]?.address;
-
+  #validateAddressFrom(data) {
+    const email = data.from[0]?.address;
     const domain = email ? email.split("@")[1] : "";
 
-    if (!this.from || typeof this.from !== "object") {
-      messages.push("From field must be an object!");
-      result.push(false);
-      return;
-    }
+    try {
+      if (!data.from || typeof data.from !== "object") {
+        throw new Error("From field must be an object!");
+      }
 
-    if (!Array.isArray(this.from) || this.from.length === 0) {
-      messages.push("From must be a non-empty array!");
-      result.push(false);
-      return;
-    }
+      if (!Array.isArray(data.from) || data.from.length === 0) {
+        throw new Error("From must be a non-empty array!");
+      }
 
-    if (!email || typeof email !== "string") {
-      messages.push("From address must be a string!");
-      result.push(false);
-      return;
-    }
+      if (!email || typeof email !== "string") {
+        throw new Error("From address must be a string!");
+      }
 
-    if (!Email.allowedDomains.includes(domain)) {
-      messages.push("Needs to come from the allowed sender!");
-      result.push(false);
-      return;
+      if (!Email.allowedDomains.includes(domain)) {
+        throw new Error("Needs to come from the allowed sender!");
+      }
+    } catch (error) {
+      logger.error(error);
     }
-
-    result.push(true);
   }
 
-  #validateAddressTo(result, messages) {
-    if (!this.to || typeof this.to !== "object") {
-      messages.push("To field must be an object!");
-      result.push(false);
-      return;
+  #validateAddressTo(data) {
+    try {
+      if (!data.to || typeof data.to !== "object") {
+        throw new Error("To field must be an object!");
+      }
+
+      if (!Array.isArray(data.to) || data.to.length === 0) {
+        throw new Error("To must be a non-empty array!");
+      }
+
+      const email = data.from[0]?.address;
+
+      if (!email || typeof email !== "string") {
+        throw new Error("To address must be a string!");
+      }
+    } catch (error) {
+      logger.error(error);
     }
-
-    if (!Array.isArray(this.to) || this.to.length === 0) {
-      messages.push("To must be a non-empty array!");
-      result.push(false);
-      return;
-    }
-
-    const email = this.from[0]?.address;
-
-    if (!email || typeof email !== "string") {
-      messages.push("To address must be a string!");
-      result.push(false);
-      return;
-    }
-
-    result.push(true);
   }
 
-  #validateEmailHtml(result, messages) {
-    if (!this.html || typeof this.html !== "string" || this.html.length === 0) {
-      messages.push("Html cannot be empty!!");
-      result.push(false);
-      return;
+  #validateEmailHtml(data) {
+    try {
+      if (
+        !data.html ||
+        typeof data.html !== "string" ||
+        data.html.length === 0
+      ) {
+        throw new Error("Html cannot be empty!!");
+      }
+    } catch (error) {
+      logger.error(error);
     }
-    result.push(true);
   }
 
-  #validateText(result, messages) {
-    if (!this.text || typeof this.text !== "string") {
-      messages.push("Text must be a string!");
-      result.push(false);
-      return;
+  #validateText(data) {
+    try {
+      if (!data.text || typeof data.text !== "string") {
+        throw new Error("Text must be a string!");
+      }
+    } catch (error) {
+      logger.error(error);
     }
-    result.push(true);
   }
 
-  #validateSubject(result, messages) {
+  #validateSubject(data) {
     if (
-      !this.subject ||
-      typeof this.subject !== "string" ||
-      this.subject.length === 0
+      !data.subject ||
+      typeof data.subject !== "string" ||
+      data.subject.length === 0
     ) {
-      messages.push("Subject cannot be empty!");
-      result.push(false);
-      return;
+      throw new Error("Subject cannot be empty and must be a string!");
     }
-    result.push(true);
   }
 
-  #validateTimestamp(result, messages) {
-    if (
-      !this.timestamp ||
-      typeof this.timestamp !== "number" ||
-      isNaN(this.timestamp)
-    ) {
-      messages.push("Timestamp must be a valid number!");
-      result.push(false);
-      return;
+  #validateHash(data) {
+    try {
+      if (!data.emailHash || typeof data.emailHash !== "string") {
+        throw new Error("Hash must be a string!");
+      }
+
+      // Assuming SHA-256 hash (64 characters)
+      if (!/^[a-f0-9]{64}$/i.test(data.emailHash)) {
+        throw new Error("Invalid hash format!");
+      }
+    } catch (error) {
+      logger.error(error);
     }
-
-    const now = Date.now();
-    const oneHourAgo = now - 60 * 60 * 1000;
-    if (this.timestamp < oneHourAgo || this.timestamp > now) {
-      messages.push("Timestamp must be within the last hour!");
-      result.push(false);
-      return;
-    }
-
-    result.push(true);
-  }
-
-  #validateHash(result, messages) {
-    if (!this.emailHash || typeof this.emailHash !== "string") {
-      messages.push("Hash must be a string!");
-      result.push(false);
-      return;
-    }
-
-    // Assuming SHA-256 hash (64 characters)
-    if (!/^[a-f0-9]{64}$/i.test(this.emailHash)) {
-      messages.push("Invalid hash format!");
-      result.push(false);
-      return;
-    }
-
-    result.push(true);
-  }
-
-  static fromEmailData(emailData) {
-    return new Email({
-      id: emailData.id,
-      html: emailData.html,
-      text: emailData.text,
-      from: emailData.from,
-      to: emailData.to,
-      subject: emailData.subject,
-      timestamp: Date.now(),
-      emailHash: emailData.emailHash,
-    });
   }
 
   getSubject() {
