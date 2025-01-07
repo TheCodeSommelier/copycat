@@ -26,7 +26,7 @@ export default class SpotAdapter {
     if (tradeData.tradeAction.match(/cover|sell/i) && tradeData.isHalf) {
       // updateOrderQuantity
     } else {
-      // cleanUpOrders
+      this.#cancelRemainingOrders(tradeData)
     }
   }
 
@@ -91,5 +91,21 @@ export default class SpotAdapter {
       logger.error(error);
       throw error;
     }
+  }
+
+  async #cancelRemainingOrders(tradeData) {
+    const { queryString, signature } = getDataToSend(
+      { symbol: tradeData.symbol },
+      this.binanceConfig.api_secret
+    );
+
+    return binanceApiCall(
+      `${spotUrl}/api/v3/openOrders?${queryString}&signature=${signature}`,
+      "DELETE",
+      {
+        "X-MBX-APIKEY": this.binanceConfig.api_key,
+        "Content-Type": "application/json",
+      }
+    );
   }
 }

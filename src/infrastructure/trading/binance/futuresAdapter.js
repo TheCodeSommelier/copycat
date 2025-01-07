@@ -22,9 +22,11 @@ export default class FuturesAdapter {
     );
     logger.info("Results of promises => ", results);
     if (tradeData.tradeAction.match(/cover|sell/i) && tradeData.isHalf) {
-      // updateOrderQuantity
+      // Retrieve remaining orders
+      // Make the calc on current supply of USDT
+      // Update orders witht the new quantity
     } else {
-      // cleanUpOrders
+      // Delete orders with the symbol
     }
     return results;
   }

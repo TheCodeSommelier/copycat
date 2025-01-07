@@ -31,12 +31,9 @@ export async function binanceApiCall(signedUrl, method, headers) {
     return data;
   } catch (error) {
     if (error.name === "SyntaxError") {
-      // JSON parsing error
       logger.error("Failed to parse JSON response:", error);
       throw new Error("Invalid JSON response from API");
     }
-
-    // Other errors (network, etc)
     logger.error("Binance API call failed:", error);
     throw error;
   }
