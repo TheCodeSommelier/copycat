@@ -1,14 +1,11 @@
 import logger from "../../logger/logger.js";
-import {
-  binanceConfigLive,
-  binanceConfigTestFutures,
-  binanceConfigTestSpot,
-} from "../../../config/binance.js";
-import { futuresUrl, tradeIsActive } from "../../../constants.js";
+import { binanceConfigLive } from "../../../config/binance.js";
+import { futuresUrl, spotUrl, tradeIsActive } from "../../../constants.js";
 import crypto from "crypto";
 
 export async function binanceApiCall(signedUrl, method, headers) {
   try {
+    console.trace("Trace that back!");
     const response = await fetch(signedUrl, {
       method: method,
       headers: headers,
@@ -49,18 +46,36 @@ export async function binanceApiCall(signedUrl, method, headers) {
  * @param {boolean} isFutures - True if using futures client, false for spot
  * @returns {Promise<number>} Quantity of assets that can be bought with available USDT
  */
-export async function getQuantity(orderData, isFutures, isHalf) {
+export async function getQuantity(baseAsset, orderData, isFutures, isHalf) {
   let baseAssetPrice = 0.0;
 
-  if (orderData.type !== "MARKET") {
-    baseAssetPrice = orderData.stopPrice || orderData.price;
+  const [minQuantity, stepSize] = await _getBaseAssetMinLotSize(
+    orderData.symbol,
+    isFutures
+  );
+
+  if (orderData.type === "MARKET") {
+    const qty = await _assetAmount(baseAsset);
+    const formatedQty = isHalf
+      ? Number(qty * 0.5).toFixed(stepSize)
+      : Number(qty).toFixed(stepSize);
+    return String(formatedQty);
   } else {
-    baseAssetPrice = await _getPrice(orderData.symbol, isFutures);
+    baseAssetPrice = orderData.stopPrice || orderData.price;
   }
 
-  const usdtAmount = await _quoteAssetAmount();
+  const usdtAmount = await _assetAmount("USDT");
   const quantity = usdtAmount === 0.0 ? 0.0 : usdtAmount / baseAssetPrice;
-  return isHalf ? quantity * 0.5 : quantity;
+
+  console.log("usdtAmount", usdtAmount);
+
+  if (minQuantity > quantity && minQuantity <= quantity + quantity * 0.1) {
+    return String(minQuantity);
+  } else if (minQuantity > quantity) {
+    return "0";
+  }
+
+  return Number(quantity).toFixed(stepSize);
 }
 
 export function getDataToSend(data, apiSecret) {
@@ -71,14 +86,28 @@ export function getDataToSend(data, apiSecret) {
 
 // Private functions
 
-export function _createSignature(queryString, apiSecret) {
+async function _getBaseAssetMinLotSize(symbol, isFutures) {
+  const baseUrl = isFutures
+    ? `${futuresUrl}/fapi/v1/exchangeInfo`
+    : `${spotUrl}/api/v3/exchangeInfo?symbol=${symbol}`;
+
+  const result = await binanceApiCall(baseUrl, "GET", {});
+
+  const { minQty, stepSize } = result.symbols
+    .filter((ticker) => ticker.symbol === symbol)[0]
+    .filters.filter((filter) => filter.filterType === "LOT_SIZE")[0];
+
+  return [parseFloat(minQty), stepSize.split(".")[1].indexOf("1") + 1];
+}
+
+function _createSignature(queryString, apiSecret) {
   return crypto
     .createHmac("sha256", apiSecret)
     .update(queryString)
     .digest("hex");
 }
 
-export function _getQueryString(data) {
+function _getQueryString(data) {
   return Object.entries(data)
     .map(
       ([key, value]) =>
@@ -88,89 +117,15 @@ export function _getQueryString(data) {
 }
 
 /**
- * Get current price for a symbol from either futures or spot market
- * @param {string} symbol - Trading pair symbol (e.g. 'BTCUSDT')
- * @param {boolean} isFutures - True if using futures client, false for spot
- * @returns {Promise<number>} Current price of the asset
- * @private
- */
-async function _getPrice(symbol, isFutures) {
-  return isFutures
-    ? await _futuresPrice({ symbol })
-    : await _spotPrice({ symbol });
-}
-
-/**
- * Get index price from futures market
- * @param {string} symbol - Trading pair symbol (e.g. 'BTCUSDT')
- * @returns {Promise<number>} Index price of the asset
- * @private
- */
-async function _futuresPrice({ symbol }) {
-  try {
-    const binanceConfig = tradeIsActive
-      ? binanceConfigLive
-      : binanceConfigTestFutures;
-    const data = { symbol: symbol };
-    const { queryString, signature } = getDataToSend(
-      data,
-      binanceConfigLive.api_secret
-    );
-
-    const indexPrice = await binanceApiCall(
-      `${futuresUrl}/fapi/v1/premiumIndex?${queryString}&signature=${signature}`,
-      "GET",
-      {
-        "X-MBX-APIKEY": binanceConfig.api_key,
-        "Content-Type": "application/json",
-      }
-    );
-    return parseFloat(indexPrice);
-  } catch (error) {
-    logger.error(error);
-    throw error;
-  }
-}
-
-/**
- * Get current price from spot market
- * @param {string} symbol - Trading pair symbol (e.g. 'BTCUSDT')
- * @returns {Promise<number>} Current spot price of the asset
- * @private
- */
-async function _spotPrice({ symbol }) {
-  try {
-    const data = { symbol: symbol };
-    const { queryString, signature } = getDataToSend(
-      data,
-      binanceConfigLive.api_secret
-    );
-
-    const price = await binanceApiCall(
-      `https://api.binance.com/api/v3/ticker/price?${queryString}`,
-      "GET",
-      {
-        "X-MBX-APIKEY": binanceConfigLive.api_key,
-        "Content-Type": "application/json",
-      }
-    );
-    return parseFloat(price);
-  } catch (error) {
-    logger.error(error);
-    throw error;
-  }
-}
-
-/**
  * Get available USDT balance from user's wallet
  * @returns {Promise<number>} Available USDT balance
  * @private
  */
-async function _quoteAssetAmount() {
-  if (!tradeIsActive) return 1000.0;
+async function _assetAmount(asset) {
+  if (!tradeIsActive) return 20.86;
   try {
     const data = {
-      asset: "USDT",
+      asset,
       timestamp: Date.now(),
     };
 
@@ -188,11 +143,14 @@ async function _quoteAssetAmount() {
       }
     );
 
-    const quantityQuoteAsset =
+    const quantityAsset =
       quoteAssetAmount.filter((assetObj) => assetObj.asset === "USDT")[0]
         ?.free || "0";
 
-    return parseFloat(quantityQuoteAsset);
+    console.log("quantityAsset => ", quantityAsset);
+
+
+    return parseFloat(quantityAsset);
   } catch (error) {
     logger.error(error);
     throw error;

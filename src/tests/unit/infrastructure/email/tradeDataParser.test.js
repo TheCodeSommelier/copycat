@@ -134,7 +134,6 @@ describe("TradeDataParser", () => {
           price: 42500,
           timeInForce: "GTC",
           side: "SELL",
-          positionSide: "SHORT",
         });
       });
     });

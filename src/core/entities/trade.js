@@ -14,6 +14,8 @@ export default class Trade {
   }
 
   static validateQuantityQuoteAsset(quantity) {
+    console.log("Qty => ", quantity);
+
     if (parseFloat(quantity) > 0 && typeof quantity === "string") {
       return;
     }

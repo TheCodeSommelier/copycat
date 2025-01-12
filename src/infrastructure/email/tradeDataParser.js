@@ -134,10 +134,6 @@ export default class TradeDataParser {
       side: isShort ? TRADE_SIDES.SELL : TRADE_SIDES.BUY,
     };
 
-    if (isShort) {
-      orderData.positionSide = "SHORT";
-    }
-
     return orderData;
   }
 

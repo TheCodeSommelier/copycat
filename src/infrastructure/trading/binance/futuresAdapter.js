@@ -15,35 +15,36 @@ export default class FuturesAdapter {
   }
 
   async executeTrade(tradeData) {
+    const entryOrder = tradeData.orders[0];
+    const quantity = await getQuantity(tradeData.baseAsset, entryOrder, true, tradeData.isHalf);
     const results = await Promise.all(
-      tradeData.orders.map((order) =>
-        this.#executeTestTrade(order, tradeData.isHalf)
-      )
+      tradeData.orders.map((order) => {
+        const orderWithQuantity = { ...order, quantity };
+        return this.#executeLiveTrade(orderWithQuantity);
+      })
     );
     logger.info("Results of promises => ", results);
-    if (tradeData.tradeAction.match(/cover|sell/i) && tradeData.isHalf) {
-      // Retrieve remaining orders
-      // Make the calc on current supply of USDT
-      // Update orders witht the new quantity
+
+    if (!tradeData.tradeAction.match(/cover|sell/i)) return;
+
+    if (tradeData.isHalf) {
+      this.#updateOrderQty(tradeData.symbol);
     } else {
-      // Delete orders with the symbol
+      const result = this.#cleanUpOrders(tradeData.symbol);
+      logger.info("Result of clean up => ", result);
     }
     return results;
   }
 
   // Private
 
-  async #executeTestTrade(order, isHalf) {
+  async #executeLiveTrade(order) {
     try {
       const orderDataObj = {
         ...order,
-        quantity: await getQuantity(order, true, isHalf, this.client),
-        computeCommissionRates: true,
         newOrderRespType: "RESULT",
         timestamp: Date.now(),
       };
-
-      orderDataObj.quantity = "100.0";
 
       Trade.validateQuantityQuoteAsset(orderDataObj.quantity);
 
@@ -53,7 +54,7 @@ export default class FuturesAdapter {
       );
 
       return await binanceApiCall(
-        `${futuresUrl}/fapi/v1/order/test?${queryString}&signature=${signature}`,
+        `${futuresUrl}/fapi/v1/order?${queryString}&signature=${signature}`,
         "POST",
         {
           "X-MBX-APIKEY": this.binanceConfig.api_key,
@@ -64,5 +65,81 @@ export default class FuturesAdapter {
       logger.error(error);
       throw error;
     }
+  }
+
+  async #cleanUpOrders(symbol) {
+    const orderDataObj = {
+      symbol,
+      timestamp: Date.now(),
+    };
+
+    const { queryString, signature } = getDataToSend(
+      orderDataObj,
+      this.binanceConfig.api_secret
+    );
+
+    return await binanceApiCall(
+      `${futuresUrl}/fapi/v1/allOpenOrders?${queryString}&signature=${signature}`,
+      "DELETE",
+      {
+        "X-MBX-APIKEY": this.binanceConfig.api_key,
+        "Content-Type": "application/json",
+      }
+    );
+  }
+
+  async #updateOrderQty(symbol) {
+    const orderDataObj = {
+      symbol,
+      timestamp: Date.now(),
+    };
+
+    const { queryString, signature } = getDataToSend(
+      orderDataObj,
+      this.binanceConfig.api_secret
+    );
+
+    const orders = await binanceApiCall(
+      `${futuresUrl}/fapi/v1/openOrder?${queryString}&signature=${signature}`,
+      "GET",
+      {
+        "X-MBX-APIKEY": this.binanceConfig.api_key,
+        "Content-Type": "application/json",
+      }
+    ).filter((order) => order.type !== "LIMIT" && order.type !== "MARKET");
+
+    await this.#cleanUpOrders(symbol);
+
+    const preparedOrders = await this.#prepOrders(orders, symbol);
+    if (preparedOrders) await this.executeTrade(preparedOrders);
+  }
+
+  async #prepOrders(orders, symbol) {
+    if (!orders?.length) {
+      logger.warn("No orders to prepare");
+      return null;
+    }
+
+    if (orders.some((order) => !order.side || !order.type)) {
+      throw new Error("Invalid order format");
+    }
+
+    return {
+      symbol,
+      clientType: "FUTURES",
+      baseAsset: symbol.slice(0, -4),
+      quoteAsset: "USDT",
+      tradeAction: "SHORT",
+      isHalf: true,
+      orders: orders.map((order) => ({
+        symbol,
+        side: order.side,
+        type: order.type,
+        stopPrice: order.stopPrice,
+        computeCommissionRates: true,
+        newOrderRespType: "RESULT",
+        timestamp: Date.now(),
+      })),
+    };
   }
 }
