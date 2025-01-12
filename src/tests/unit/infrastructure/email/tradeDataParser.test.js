@@ -1,5 +1,5 @@
 import { expect } from "../../../setup.js";
-import TradeDataParser from "../../../../services/tradeDataParser.js";
+import TradeDataParser from "../../../../services/TradeDataParser.js";
 
 describe("TradeDataParser", () => {
   describe("Symbol Extraction", () => {
@@ -134,7 +134,6 @@ describe("TradeDataParser", () => {
           price: 42500,
           timeInForce: "GTC",
           side: "SELL",
-          positionSide: "SHORT",
         });
       });
     });

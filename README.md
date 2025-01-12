@@ -42,7 +42,7 @@ trading-bot/
 │   │   ├── emailValidator.js
 │   │   ├── imapClient.js
 │   │   ├── index.js
-│   │   └── tradeDataParser.js
+│   │   └── TradeDataParser.js
 │   └── trading
 │       ├── binance
 │       │   ├── futuresClient.js
@@ -52,7 +52,7 @@ trading-bot/
 │       └── utils.js
 ├── services
 │   ├── emailService.js
-│   ├── loggerService.js
+│   ├── logger.js
 │   └── tradingService.js
 ├── tests
 │   ├── integration

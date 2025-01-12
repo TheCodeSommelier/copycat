@@ -2,9 +2,9 @@ import Email from "../../core/entities/email.js";
 import crypto from "crypto";
 import validator from "validator";
 import sanitizeHtml from "sanitize-html";
-import logger from "../../services/loggerService.js";
+import logger from "../logger/logger.js";
 
-export default class SecureEmailParser {
+export default class EmailParser {
   sanitizeOptions = {
     allowedTags: [
       "b",
@@ -45,7 +45,7 @@ export default class SecureEmailParser {
    */
   async parse(emailData) {
     try {
-      const emailConstructionObj = {
+      const email = new Email({
         id: crypto.randomUUID(),
         html: this.#secureHtml(emailData.html?.trim()),
         text: this.#secureText(emailData.text?.trim()),
@@ -53,26 +53,20 @@ export default class SecureEmailParser {
         from: this.#secureAddress(emailData.from),
         subject: this.#secureText(emailData.subject),
         emailHash: this.#generateHash(emailData),
-      };
-
-      const email = Email.fromEmailData(emailConstructionObj);
-      const validationResult = email.validate();
-
-      if (validationResult.result.includes(false)) {
-        const messages = validationResult.messages.join(", ");
-        throw new Error(`Here is what needs to be fixed:\n${messages}`);
-      }
+      });
 
       logger.info(`This is the email that came:\n${email.getAllData()}\n`);
 
       return email;
     } catch (error) {
       // Log error securely (avoid exposing sensitive data)
-      logger.error(`Email parsing error: \n${{
-        errorType: error.constructor.name,
-        message: error.message,
-        timestamp: new Date().toISOString(),
-      }}\n`);
+      logger.error(
+        `Email parsing error: \n${{
+          errorType: error.constructor.name,
+          message: error.message,
+          timestamp: new Date().toISOString(),
+        }}\n`
+      );
 
       throw new Error("Failed to parse email securely");
     }

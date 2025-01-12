@@ -1,3 +1,6 @@
+import Trade from "../../core/entities/trade.js";
+import logger from "../logger/logger.js";
+
 const ORDER_TYPES = {
   ENTRY: {
     FUTURES: "LIMIT",
@@ -25,16 +28,16 @@ const CLIENT_TYPES = {
   SPOT: "SPOT",
 };
 
-export default class TradeDataParser {
-  static PRICE_PATTERNS = {
-    ENTRY: /Entry:\s+\$([0-9,]+(?:\.\d+)?)/i,
-    STOP: /Stop:\s+\$([0-9,]+(?:\.\d+)?)/i,
-    TARGET: /Target:\s+\$([0-9,]+(?:\.\d+)?)/i,
-    SYMBOL: /(\p{Lu}+)\/(\p{Lu}+)/gu,
-    SIDE: /short|buy|sell|cover/gi,
-  };
+const PRICE_PATTERNS = {
+  ENTRY: /Entry:\s+\$([0-9,]+(?:\.\d+)?)/i,
+  STOP: /Stop:\s+\$([0-9,]+(?:\.\d+)?)/i,
+  TARGET: /Target:\s+\$([0-9,]+(?:\.\d+)?)/i,
+  SYMBOL: /(\p{Lu}+)\/(\p{Lu}+)/gu,
+  SIDE: /short|buy|sell|cover/gi,
+};
 
-  static extractTradeData(email) {
+export default class TradeDataParser {
+  extractTradeData(email) {
     try {
       const subject = email.getSubject();
       const html = email.getHtml();
@@ -53,7 +56,7 @@ export default class TradeDataParser {
 
       // Handle market orders (SELL/COVER)
       if (this.isMarketOrder(side)) {
-        return {
+        return new Trade({
           ...tradeData,
           side: isFutures ? TRADE_SIDES.BUY : TRADE_SIDES.SELL,
           type: "MARKET",
@@ -62,11 +65,11 @@ export default class TradeDataParser {
             symbol,
             isFutures,
           }),
-        };
+        });
       }
 
       // Handle limit orders (BUY/SHORT)
-      return {
+      return new Trade({
         ...tradeData,
         ...this.extractPrices(html),
         orders: this.createOrders({
@@ -75,9 +78,9 @@ export default class TradeDataParser {
           isFutures,
           isShort,
         }),
-      };
+      });
     } catch (error) {
-      throw new Error(`Failed to extract trade data: ${error.message}`);
+      logger.error(error)
     }
   }
 
@@ -87,7 +90,7 @@ export default class TradeDataParser {
    * @param {Boolean} isFutures - True if trade is futures trade (Short or Cover)
    * @returns {Array} - Returns an array of single order, because clients use .map to process orders.
    */
-  static createCloseOrder({ symbol, isFutures }) {
+  createCloseOrder({ symbol, isFutures }) {
     return [
       {
         symbol,
@@ -97,7 +100,7 @@ export default class TradeDataParser {
     ];
   }
 
-  static createOrders({ symbol, html, isFutures, isShort }) {
+  createOrders({ symbol, html, isFutures, isShort }) {
     const prices = this.extractPrices(html);
 
     return [
@@ -122,7 +125,7 @@ export default class TradeDataParser {
     ];
   }
 
-  static createEntryOrder({ symbol, price, isFutures, isShort }) {
+  createEntryOrder({ symbol, price, isFutures, isShort }) {
     const orderData = {
       symbol,
       type: ORDER_TYPES.ENTRY[isFutures ? "FUTURES" : "SPOT"],
@@ -131,14 +134,10 @@ export default class TradeDataParser {
       side: isShort ? TRADE_SIDES.SELL : TRADE_SIDES.BUY,
     };
 
-    if (isShort) {
-      orderData.positionSide = "SHORT";
-    }
-
     return orderData;
   }
 
-  static createStopOrder({ symbol, price, isFutures, isShort }) {
+  createStopOrder({ symbol, price, isFutures, isShort }) {
     return {
       symbol,
       type: ORDER_TYPES.STOP[isFutures ? "FUTURES" : "SPOT"],
@@ -148,7 +147,7 @@ export default class TradeDataParser {
     };
   }
 
-  static createExitOrder({ symbol, price, isFutures, isShort }) {
+  createExitOrder({ symbol, price, isFutures, isShort }) {
     return {
       symbol,
       type: ORDER_TYPES.EXIT[isFutures ? "FUTURES" : "SPOT"],
@@ -158,7 +157,7 @@ export default class TradeDataParser {
     };
   }
 
-  static extractPrices(html) {
+  extractPrices(html) {
     return {
       entryPrice: this.extractPrice(html, "ENTRY"),
       stopLoss: this.extractPrice(html, "STOP"),
@@ -166,10 +165,10 @@ export default class TradeDataParser {
     };
   }
 
-  static extractPrice(html, priceType) {
+  extractPrice(html, priceType) {
     const match = html
       .replace(/confirmation\s+\w+/gi, "")
-      .match(this.PRICE_PATTERNS[priceType]);
+      .match(PRICE_PATTERNS[priceType]);
 
     if (!match?.[1]) {
       throw new Error(`Failed to extract ${priceType} price`);
@@ -178,8 +177,8 @@ export default class TradeDataParser {
     return parseFloat(match[1].replace(/[,$]/g, ""));
   }
 
-  static extractSymbol(subject) {
-    const match = subject.match(this.PRICE_PATTERNS.SYMBOL);
+  extractSymbol(subject) {
+    const match = subject.match(PRICE_PATTERNS.SYMBOL);
 
     if (!match || !match[0]) {
       throw new Error("Failed to extract symbol");
@@ -193,8 +192,8 @@ export default class TradeDataParser {
     };
   }
 
-  static extractSide(subject) {
-    const match = subject.match(this.PRICE_PATTERNS.SIDE);
+  extractSide(subject) {
+    const match = subject.match(PRICE_PATTERNS.SIDE);
 
     if (!match || !match[0]) {
       throw new Error("Failed to extract trade side");
@@ -203,15 +202,15 @@ export default class TradeDataParser {
     return match[0].toUpperCase();
   }
 
-  static isHalf(subject) {
+  isHalf(subject) {
     return /half/i.test(subject);
   }
 
-  static isFuturesTrade(side) {
+  isFuturesTrade(side) {
     return [TRADE_SIDES.SHORT, TRADE_SIDES.COVER].includes(side);
   }
 
-  static isMarketOrder(side) {
+  isMarketOrder(side) {
     return [TRADE_SIDES.SELL, TRADE_SIDES.COVER].includes(side);
   }
 }

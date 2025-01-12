@@ -1,51 +1,29 @@
-import { ImapClient } from "./infrastructure/email/index.js";
-import TradeDataParser from "./services/tradeDataParser.js";
-import { SpotClient, FuturesClient } from "./infrastructure/trading/index.js";
-import logger from "./services/loggerService.js";
-import chalk from "chalk";
+import ImapAdapter from "./infrastructure/email/adapters/imap.adapter.js";
+import { imapConfig } from "./config/imap.js";
+import EmailParser from "./infrastructure/email/emailParser.js";
+import TradeDataParser from "./infrastructure/email/tradeDataParser.js";
+import logger from "./infrastructure/logger/logger.js";
 import dotenv from "dotenv";
+import BinanceAdapter from "./infrastructure/trading/binance/binanceAdapter.js";
+import { tradeIsActive } from "./constants.js";
 dotenv.config();
 
 // One  more commnent
 const main = async () => {
-  const imapClient = new ImapClient();
-  await imapClient.connect();
+  const emailParser = new EmailParser();
+  const trader = new BinanceAdapter();
+  const reciever = new ImapAdapter(imapConfig, logger, emailParser);
+  const tradeParser = new TradeDataParser();
 
-  imapClient.on("newEmail", async (securedEmail) => {
-    logger.info(chalk.green.bold("📩 New email is here!"));
-    const tradeData = TradeDataParser.extractTradeData(securedEmail);
-    logger.info(chalk.underline.cyan("And here is the parsed data:\n"), tradeData);
-    const shouldTrade = process.env.TRADING_ACTIVE === "true";
-    const isFutures = tradeData.clientType === "FUTURES";
-    if (shouldTrade) {
-      isFutures ? await testFutures(tradeData) : await testSpot(tradeData);
-      logger.info(
-        chalk.bgGreen.white.bold(
-          "\nTrades are through! Pleasure doing business!"
-        )
-      );
-      return;
-    }
-    logger.error(
-      chalk.white.bold.bgRed(
-        "Trading is off... Check the .env file and configure trading to be active..."
-      )
-    );
+  console.log("Trade Is Active: ", tradeIsActive);
+
+  reciever.monitorEmails();
+  reciever.onTradeSignal(async (email) => {
+    const tradeData = tradeParser.extractTradeData(email);
+    logger.info(`Here it is!`, tradeData);
+
+    trader.executeTrade(tradeData);
   });
-};
-
-const testFutures = async (tradeData) => {
-  const futuresClient = new FuturesClient();
-
-  const tradeRes = await futuresClient.enqueueFuturesOrders(tradeData);
-  logger.info("TRADE_RES => ", tradeRes);
-};
-
-const testSpot = async (tradeData) => {
-  const spotClient = new SpotClient();
-
-  const tradeRes = await spotClient.executeTrade(tradeData);
-  logger.info("TRADE_RES => ", tradeRes);
 };
 
 main();
