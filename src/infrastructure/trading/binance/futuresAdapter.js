@@ -16,7 +16,12 @@ export default class FuturesAdapter {
 
   async executeTrade(tradeData) {
     const entryOrder = tradeData.orders[0];
-    const quantity = await getQuantity(tradeData.baseAsset, entryOrder, true, tradeData.isHalf);
+    const quantity = await getQuantity(
+      tradeData.baseAsset,
+      entryOrder,
+      true,
+      tradeData.isHalf
+    );
     const results = await Promise.all(
       tradeData.orders.map((order) => {
         const orderWithQuantity = { ...order, quantity };
@@ -99,14 +104,21 @@ export default class FuturesAdapter {
       this.binanceConfig.api_secret
     );
 
-    const orders = await binanceApiCall(
-      `${futuresUrl}/fapi/v1/openOrder?${queryString}&signature=${signature}`,
+    const ordersData = await binanceApiCall(
+      `${futuresUrl}/fapi/v1/openOrders?${queryString}&signature=${signature}`,
       "GET",
       {
         "X-MBX-APIKEY": this.binanceConfig.api_key,
         "Content-Type": "application/json",
       }
-    ).filter((order) => order.type !== "LIMIT" && order.type !== "MARKET");
+    );
+
+    const orders = ordersData.filter(
+      (order) =>
+        order.type !== "LIMIT" &&
+        order.type !== "MARKET" &&
+        order.symbol === symbol
+    );
 
     await this.#cleanUpOrders(symbol);
 
