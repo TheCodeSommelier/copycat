@@ -1,4 +1,5 @@
-export class EmailPort {
+
+export class ImapPort {
   async monitorEmails() {
     throw new Error("Not implemented");
   }
