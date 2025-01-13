@@ -1,4 +1,4 @@
-import logger from "../../infrastructure/logger/logger";
+import logger from "../../infrastructure/logger/logger.js";
 
 export default class Trade {
   constructor(data = {}) {
