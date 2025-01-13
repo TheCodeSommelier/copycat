@@ -1,8 +1,8 @@
 import Imap from "imap";
 import { simpleParser } from "mailparser";
-import { EmailPort } from "../../../core/ports/email.port.js";
+import { ImapPort } from "../../../core/ports/imap.port.js";
 
-export default class ImapAdapter extends EmailPort {
+export default class ImapAdapter extends ImapPort {
   constructor(config, logger, emailParser) {
     super();
     this.imap = new Imap(config);

@@ -1,16 +1,23 @@
+import logger from "../../infrastructure/logger/logger";
+
 export default class Trade {
   constructor(data = {}) {
-    this.#validateTradeData(data);
-    this.symbol = data.symbol;
-    this.baseAsset = data.baseAsset;
-    this.quoteAsset = data.quoteAsset;
-    this.clientType = data.clientType;
-    this.entryPrice = data.entryPrice;
-    this.targetPrice = data.targetPrice;
-    this.stopLoss = data.stopLoss;
-    this.tradeAction = data.tradeAction;
-    this.orders = data.orders;
-    this.isHalf = data.isHalf || false;
+    try {
+      this.#validateTradeData(data);
+      this.symbol = data.symbol;
+      this.baseAsset = data.baseAsset;
+      this.quoteAsset = data.quoteAsset;
+      this.clientType = data.clientType;
+      this.entryPrice = data.entryPrice;
+      this.targetPrice = data.targetPrice;
+      this.stopLoss = data.stopLoss;
+      this.tradeAction = data.tradeAction;
+      this.orders = data.orders;
+      this.isHalf = data.isHalf || false;
+    } catch (error) {
+      logger.error("Trade validations failed:\n", error);
+      throw error;
+    }
   }
 
   static validateQuantityQuoteAsset(quantity) {

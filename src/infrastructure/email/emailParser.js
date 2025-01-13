@@ -45,7 +45,7 @@ export default class EmailParser {
    */
   async parse(emailData) {
     try {
-      const email = new Email({
+      const sanitizedEmail = {
         id: crypto.randomUUID(),
         html: this.#secureHtml(emailData.html?.trim()),
         text: this.#secureText(emailData.text?.trim()),
@@ -53,21 +53,12 @@ export default class EmailParser {
         from: this.#secureAddress(emailData.from),
         subject: this.#secureText(emailData.subject),
         emailHash: this.#generateHash(emailData),
-      });
-
+      };
+      const email = new Email(sanitizedEmail);
       logger.info(`This is the email that came:\n${email.getAllData()}\n`);
-
       return email;
     } catch (error) {
-      // Log error securely (avoid exposing sensitive data)
-      logger.error(
-        `Email parsing error: \n${{
-          errorType: error.constructor.name,
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        }}\n`
-      );
-
+      logger.error(`Email parsing error:\n`, error);
       throw new Error("Failed to parse email securely");
     }
   }
