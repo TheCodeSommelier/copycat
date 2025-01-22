@@ -10,6 +10,7 @@ export default class ImapAdapter extends ImapPort {
     this.emailParser = emailParser;
     this.isConnected = false;
     this.handlers = new Set();
+    this.maxReconnectionAttempts = 10;
     this.#setupEventListeners();
   }
 
@@ -33,10 +34,28 @@ export default class ImapAdapter extends ImapPort {
 
   // Private
 
+  async #emitErrorEvent(message) {
+    this.isConnected = false;
+
+    // First end the connection properly
+    this.imap.end();
+
+    // Wait a brief moment for internal state cleanup
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Now emit the error
+    const error = new Error(message);
+    error.source = "socket";
+    error.code = "ECONNRESET";
+
+    this.imap.emit("error", error);
+  }
+
   async #connect() {
     return new Promise((resolve, reject) => {
       this.imap.once("ready", () => {
         this.isConnected = true;
+        this.maxReconnectionAttempts = 10;
         resolve();
       });
       this.imap.once("error", reject);
@@ -49,8 +68,12 @@ export default class ImapAdapter extends ImapPort {
       this.logger.info("You are in!");
     });
 
-    this.imap.on("error", (err) => {
+    this.imap.on("error", async (err) => {
       this.logger.error("IMAP Error:", err);
+
+      if (!this.isConnected && this.maxReconnectionAttempts > 0) {
+        this.#reconnect();
+      }
     });
 
     this.imap.on("end", () => {
@@ -89,9 +112,7 @@ export default class ImapAdapter extends ImapPort {
           try {
             const preParsed = await simpleParser(stream);
 
-            if (
-              !/\w+\s+Alert:\s+\w{0,}\/\w{0,}/ig.test(preParsed.subject)
-            ) {
+            if (!/\w+\s+Alert:\s+\w{0,}\/\w{0,}/gi.test(preParsed.subject)) {
               return;
             }
 
@@ -104,6 +125,27 @@ export default class ImapAdapter extends ImapPort {
       });
     } catch (error) {
       this.logger.error("Fatal fetch error:", error);
+    }
+  }
+
+  async #reconnect() {
+    const delay = (10 - this.maxReconnectionAttempts) * 2000;
+    this.logger.info(
+      `Attempting to reconnect in ${delay / 1000} seconds... (${
+        this.maxReconnectionAttempts
+      } attempts remaining)`
+    );
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      await this.monitorEmails();
+      this.maxReconnectionAttempts--;
+    } catch (error) {
+      this.logger.error("Reconnection failed:", error);
+      if (this.maxReconnectionAttempts <= 1) {
+        this.logger.error("Max reconnection attempts reached");
+        throw new Error("Failed to reconnect after maximum attempts");
+      }
     }
   }
 }
