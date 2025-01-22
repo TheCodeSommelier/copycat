@@ -1,6 +1,6 @@
 import winston from "winston";
 import path from "path";
-import LoggerPort from "../../core/ports/loggerPort.js";
+import LoggerPort from "../../core/ports/logger.port.js";
 
 class Logger extends LoggerPort {
   constructor() {

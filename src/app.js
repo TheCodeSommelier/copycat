@@ -4,7 +4,7 @@ import EmailParser from "./infrastructure/email/emailParser.js";
 import TradeDataParser from "./infrastructure/email/tradeDataParser.js";
 import logger from "./infrastructure/logger/logger.js";
 import dotenv from "dotenv";
-import BinanceAdapter from "./infrastructure/trading/binance/binanceAdapter.js";
+import BinanceAdapter from "./infrastructure/trading/binance/binance.adapter.js";
 import { tradeIsActive } from "./constants.js";
 dotenv.config();
 

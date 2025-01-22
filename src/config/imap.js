@@ -6,5 +6,6 @@ export const imapConfig = {
   password: process.env.PASSWORD,
   host: process.env.IMAP_HOST,
   port: parseInt(process.env.IMAP_PORT),
-  tls: true
+  tls: true,
+  keepalive: true,
 };
