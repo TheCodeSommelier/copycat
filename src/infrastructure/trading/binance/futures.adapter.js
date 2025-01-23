@@ -15,6 +15,7 @@ export default class FuturesAdapter {
   }
 
   async executeTrade(tradeData) {
+    this.#setLeverage(tradeData.symbol);
     const entryOrder = tradeData.orders[0];
     const quantity = await getQuantity(
       tradeData.baseAsset,
@@ -24,8 +25,8 @@ export default class FuturesAdapter {
     );
     const results = await Promise.all(
       tradeData.orders.map((order) => {
-        const orderWithQuantity = { ...order, quantity };
-        return this.#executeLiveTrade(orderWithQuantity);
+        const formattedOrder = { ...order, quantity };
+        return this.#executeLiveTrade(formattedOrder);
       })
     );
     logger.info("Results of promises => ", results);
@@ -42,6 +43,33 @@ export default class FuturesAdapter {
   }
 
   // Private
+
+  async #setLeverage(symbol) {
+    try {
+      const data = {
+        symbol,
+        leverage: 1,
+        timestamp: Date.now(),
+      };
+
+      const { queryString, signature } = getDataToSend(
+        data,
+        this.binanceConfig.api_secret
+      );
+
+      await binanceApiCall(
+        `${futuresUrl}/fapi/v1/leverage?${queryString}&signature=${signature}`,
+        "POST",
+        {
+          "X-MBX-APIKEY": this.binanceConfig.api_key,
+          "Content-Type": "application/json",
+        }
+      );
+    } catch (error) {
+      logger.error("Binance leverage error: ", error);
+      throw error;
+    }
+  }
 
   async #executeLiveTrade(order) {
     try {

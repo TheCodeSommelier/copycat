@@ -19,7 +19,7 @@ const main = async () => {
 
   reciever.monitorEmails();
   reciever.onTradeSignal(async (email) => {
-    const tradeData = tradeParser.extractTradeData(email);
+    const tradeData = await tradeParser.extractTradeData(email);
     logger.info(`Here it is!`, tradeData);
 
     trader.executeTrade(tradeData);
