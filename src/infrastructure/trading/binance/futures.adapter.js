@@ -44,6 +44,11 @@ export default class FuturesAdapter {
 
   // Private
 
+  /**
+   * Sets the leverage to 1x meaning no leverage.
+   * @param {String} symbol
+   * @private
+   */
   async #setLeverage(symbol) {
     try {
       const data = {
