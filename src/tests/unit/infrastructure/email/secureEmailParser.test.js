@@ -1,21 +1,21 @@
 import { expect } from "../../../setup.js";
-import SecureEmailParser from "../../../../infrastructure/email/secureEmailParser.js";
-import TradeDataExtractor from "../../../../services/TradeDataParser.js";
+import EmailParser from "../../../../core/use-cases/email.parser.js";
+import TradeParser from "../../../../core/use-cases/trade.parser.js";
 import crypto from "crypto";
 import sinon from "sinon";
 import { fixtures } from "../../../helpers/emailParserFixtures.js";
-import logger from "../../../../services/logger.js";
+import logger from "../../../../infrastructure/logger/logger.js";
 
-describe("SecureEmailParser", () => {
+describe("EmailParser", () => {
   let parser;
   let clock;
 
   beforeEach(() => {
-    parser = new SecureEmailParser();
+    parser = new EmailParser();
     clock = sinon.useFakeTimers(new Date("2024-01-01").getTime());
 
     // Stub dependencies
-    sinon.stub(TradeDataExtractor, "extractTradeData").returns({
+    sinon.stub(TradeParser, "extractTradeData").returns({
       symbol: "BTCUSDT",
       side: "BUY",
     });
@@ -50,7 +50,7 @@ describe("SecureEmailParser", () => {
         });
 
         it("should include ID and timestamp in trade data", async () => {
-          TradeDataExtractor.extractTradeData.returns({
+          TradeParser.extractTradeData.returns({
             symbol: "BTCUSDT",
             side: "BUY",
             id: "test-uuid",
@@ -64,7 +64,7 @@ describe("SecureEmailParser", () => {
 
         describe("HTML Sanitization", () => {
           beforeEach(() => {
-            TradeDataExtractor.extractTradeData.callsFake((validatedEmail) => ({
+            TradeParser.extractTradeData.callsFake((validatedEmail) => ({
               ...validatedEmail,
             }));
           });

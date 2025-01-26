@@ -2,8 +2,9 @@ import { tradeIsActive, spotUrl } from "../../../constants.js";
 import {
   binanceConfigLive,
   binanceConfigTestSpot,
-} from "../../../config/binance.js";
-import { getQuantity, getDataToSend, binanceApiCall } from "./utils.js";
+} from "./binance.config.js";
+import { getQuantity, getDataToSend } from "./utils.js";
+import BinanceAdapter from "./binance.adapter.js";
 import logger from "../../logger/logger.js";
 import dotenv from "dotenv";
 import Trade from "../../../core/entities/trade.js";
@@ -57,7 +58,7 @@ export default class SpotAdapter {
         this.binanceConfig.api_secret
       );
 
-      return await binanceApiCall(
+      return await BinanceAdapter.binanceApiCall(
         `${spotUrl}/api/v3/order?${queryString}&signature=${signature}`,
         "POST",
         {
@@ -80,7 +81,7 @@ export default class SpotAdapter {
       this.binanceConfig.api_secret
     );
 
-    return binanceApiCall(
+    return BinanceAdapter.binanceApiCall(
       `${spotUrl}/api/v3/openOrders?${queryString}&signature=${signature}`,
       "DELETE",
       {
@@ -102,7 +103,7 @@ export default class SpotAdapter {
       this.binanceConfig.api_secret
     );
 
-    return binanceApiCall(
+    return BinanceAdapter.binanceApiCall(
       `${spotUrl}/api/v3/order/cancelReplace?${queryString}&signature=${signature}`,
       "POST",
       {

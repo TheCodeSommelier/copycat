@@ -1,81 +1,28 @@
 import logger from "../../logger/logger.js";
-import { binanceConfigLive } from "../../../config/binance.js";
+import { binanceConfigLive } from "./binance.config.js";
 import { futuresUrl, spotUrl, tradeIsActive } from "../../../constants.js";
+import BinanceAdapter from "./binance.adapter.js";
 import crypto from "crypto";
 
-export async function binanceApiCall(signedUrl, method, headers) {
-  try {
-    console.trace("Trace that back!");
-    const response = await fetch(signedUrl, {
-      method: method,
-      headers: headers,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.error(`Binance API error: ${response.status} ${errorText}`);
-      throw new Error(`HTTP error! status: ${response.status} ${errorText}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      logger.error(`Invalid content type or empty response: ${text}`);
-      throw new Error("Invalid response format");
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    if (error.name === "SyntaxError") {
-      logger.error("Failed to parse JSON response:", error);
-      throw new Error("Invalid JSON response from API");
-    }
-    logger.error("Binance API call failed:", error);
-    throw error;
-  }
-}
-
 /**
- * Calculate the quantity of assets to buy based on order data and available USDT
- * @param {Object} orderData - Order data containing price and symbol information
- * @param {string} orderData.type - Order type (e.g. 'MARKET', 'LIMIT')
- * @param {string} orderData.symbol - Trading pair symbol (e.g. 'BTCUSDT')
- * @param {string} [orderData.stopPrice] - Stop price for stop loss and take profit orders
- * @param {string} [orderData.price] - Entry price for limit orders
- * @param {boolean} isFutures - True if using futures client, false for spot
- * @returns {Promise<number>} Quantity of assets that can be bought with available USDT
+ * Calculate order quantity based on asset balance and price
+ * @param {string} baseAsset - Base asset symbol
+ * @param {Object} orderData - Order parameters
+ * @param {boolean} isFutures - Whether it's a futures order
+ * @param {boolean} isHalf - Whether to use half quantity
+ * @returns {Promise<string>} Formatted quantity string
  */
 export async function getQuantity(baseAsset, orderData, isFutures, isHalf) {
-  let baseAssetPrice = 0.0;
-
   const [minQuantity, stepSize] = await _getBaseAssetMinLotSize(
     orderData.symbol,
     isFutures
   );
 
   if (orderData.type === "MARKET") {
-    const qty = await _assetAmount(baseAsset);
-    const formatedQty = isHalf
-      ? Number(qty * 0.5).toFixed(stepSize)
-      : Number(qty).toFixed(stepSize);
-    return String(formatedQty);
-  } else {
-    baseAssetPrice = orderData.stopPrice || orderData.price;
+    return await _calculateMarketOrderQuantity(baseAsset, stepSize, isHalf);
   }
 
-  const usdtAmount = await _assetAmount("USDT");
-  const quantity = usdtAmount === 0.0 ? 0.0 : usdtAmount / baseAssetPrice;
-
-  console.log("usdtAmount", usdtAmount);
-
-  if (minQuantity > quantity && minQuantity <= quantity + quantity * 0.1) {
-    return String(minQuantity);
-  } else if (minQuantity > quantity) {
-    return "0";
-  }
-
-  return Number(quantity).toFixed(stepSize);
+  return await _calculateLimitOrderQuantity(orderData, minQuantity, stepSize);
 }
 
 export function getDataToSend(data, apiSecret) {
@@ -84,20 +31,97 @@ export function getDataToSend(data, apiSecret) {
   return { queryString, signature };
 }
 
+export async function formatPrice(symbol, isFutures, price) {
+  const baseUrl = isFutures
+    ? `${futuresUrl}/fapi/v1/exchangeInfo`
+    : `${spotUrl}/api/v3/exchangeInfo?symbol=${symbol}`;
+
+  const result = await BinanceAdapter.binanceApiCall(baseUrl, "GET", {});
+
+  let { minPrice, tickSize } = result.symbols
+    .filter((ticker) => ticker.symbol === symbol)[0]
+    .filters.filter((filter) => filter.filterType === "PRICE_FILTER")[0];
+
+  tickSize =
+    parseInt(tickSize) > 0 ? 0 : tickSize.split(".")[1].indexOf("1") + 1;
+
+  if (minPrice > price && minPrice <= price + price * 0.1)
+    return parseFloat(minPrice);
+  return Number(price).toFixed(tickSize);
+}
+
 // Private functions
+
+/**
+ * Calculate quantity for market orders
+ * @private
+ */
+async function _calculateMarketOrderQuantity(baseAsset, stepSize, isHalf) {
+  const qty = await _assetAmount(baseAsset);
+  const amount = isHalf ? qty * 0.5 : qty;
+  return _formatQuantity(amount, stepSize);
+}
+
+/**
+ * Calculate quantity for limit/stop orders
+ * @private
+ */
+async function _calculateLimitOrderQuantity(orderData, minQuantity, stepSize) {
+  const baseAssetPrice = orderData.stopPrice || orderData.price;
+  const usdtAmount = await _assetAmount("USDT");
+
+  if (usdtAmount === 0) return "0";
+
+  let qty = usdtAmount / baseAssetPrice;
+
+  // Round down if necessary
+  if (!Number.isInteger(qty) && stepSize === 0) {
+    qty = Math.floor(qty);
+  }
+
+  // Check minimum quantity constraints
+  if (_isWithinMinQuantityBuffer(qty, minQuantity)) {
+    return String(minQuantity);
+  }
+
+  if (qty < minQuantity) {
+    return "0";
+  }
+
+  return _formatQuantity(qty, stepSize);
+}
+
+/**
+ * Check if quantity is within 10% of minimum
+ * @private
+ */
+function _isWithinMinQuantityBuffer(quantity, minQuantity) {
+  return minQuantity > quantity && minQuantity <= quantity + quantity * 0.1;
+}
+
+/**
+ * Format quantity with proper decimal places
+ * @private
+ */
+function _formatQuantity(quantity, stepSize) {
+  return Number(quantity).toFixed(stepSize);
+}
 
 async function _getBaseAssetMinLotSize(symbol, isFutures) {
   const baseUrl = isFutures
     ? `${futuresUrl}/fapi/v1/exchangeInfo`
     : `${spotUrl}/api/v3/exchangeInfo?symbol=${symbol}`;
 
-  const result = await binanceApiCall(baseUrl, "GET", {});
+  const result = await BinanceAdapter.binanceApiCall(baseUrl, "GET", {});
 
   const { minQty, stepSize } = result.symbols
     .filter((ticker) => ticker.symbol === symbol)[0]
     .filters.filter((filter) => filter.filterType === "LOT_SIZE")[0];
 
-  return [parseFloat(minQty), stepSize.split(".")[1].indexOf("1") + 1];
+  const finalStepSize =
+    parseInt(stepSize) > 0 ? 0 : stepSize.split(".")[1].indexOf("1") + 1;
+
+  return [parseFloat(minQty), finalStepSize];
 }
 
 function _createSignature(queryString, apiSecret) {
@@ -122,7 +146,7 @@ function _getQueryString(data) {
  * @private
  */
 async function _assetAmount(asset) {
-  if (!tradeIsActive) return 20.86;
+  if (!tradeIsActive) return 300;
   try {
     const data = {
       asset,
@@ -134,7 +158,7 @@ async function _assetAmount(asset) {
       binanceConfigLive.api_secret
     );
 
-    const quoteAssetAmount = await binanceApiCall(
+    const quoteAssetAmount = await BinanceAdapter.binanceApiCall(
       `https://api.binance.com/sapi/v3/asset/getUserAsset?${queryString}&signature=${signature}`,
       "POST",
       {
@@ -148,7 +172,6 @@ async function _assetAmount(asset) {
         ?.free || "0";
 
     console.log("quantityAsset => ", quantityAsset);
-
 
     return parseFloat(quantityAsset);
   } catch (error) {

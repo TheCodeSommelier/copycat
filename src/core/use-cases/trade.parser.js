@@ -1,5 +1,6 @@
-import Trade from "../../core/entities/trade.js";
-import logger from "../logger/logger.js";
+import Trade from "../entities/trade.js";
+import logger from "../../infrastructure/logger/logger.js";
+import { formatPrice } from "../../infrastructure/trading/binance/utils.js";
 
 const ORDER_TYPES = {
   ENTRY: {
@@ -36,8 +37,8 @@ const PRICE_PATTERNS = {
   SIDE: /short|buy|sell|cover/gi,
 };
 
-export default class TradeDataParser {
-  extractTradeData(email) {
+export default class TradeParser {
+  async extractTradeData(email) {
     try {
       const subject = email.getSubject();
       const html = email.getHtml();
@@ -68,10 +69,25 @@ export default class TradeDataParser {
         });
       }
 
+      const rawPrices = this.extractPrices(html);
+
+      // Format all prices in parallel
+      const [entryPrice, stopLoss, targetPrice] = await Promise.all([
+        formatPrice(symbol, isFutures, rawPrices.entryPrice),
+        formatPrice(symbol, isFutures, rawPrices.stopLoss),
+        formatPrice(symbol, isFutures, rawPrices.targetPrice)
+      ]);
+
+      this.formattedPrices = {
+        entryPrice: parseFloat(entryPrice),
+        stopLoss: parseFloat(stopLoss),
+        targetPrice: parseFloat(targetPrice)
+      };
+
       // Handle limit orders (BUY/SHORT)
       return new Trade({
         ...tradeData,
-        ...this.extractPrices(html),
+        ...this.formattedPrices,
         orders: this.createOrders({
           symbol,
           html,
@@ -100,25 +116,23 @@ export default class TradeDataParser {
     ];
   }
 
-  createOrders({ symbol, html, isFutures, isShort }) {
-    const prices = this.extractPrices(html);
-
+  createOrders({ symbol, isFutures, isShort }) {
     return [
       this.createEntryOrder({
         symbol,
-        price: prices.entryPrice,
+        price: this.formattedPrices.entryPrice,
         isFutures,
         isShort,
       }),
       this.createStopOrder({
         symbol,
-        price: prices.stopLoss,
+        price: this.formattedPrices.stopLoss,
         isFutures,
         isShort,
       }),
       this.createExitOrder({
         symbol,
-        price: prices.targetPrice,
+        price: this.formattedPrices.targetPrice,
         isFutures,
         isShort,
       }),
