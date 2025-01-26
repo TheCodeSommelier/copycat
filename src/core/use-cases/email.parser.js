@@ -1,8 +1,8 @@
-import Email from "../../core/entities/email.js";
+import Email from "../entities/email.js";
 import crypto from "crypto";
 import validator from "validator";
 import sanitizeHtml from "sanitize-html";
-import logger from "../logger/logger.js";
+import logger from "../../infrastructure/logger/logger.js";
 
 export default class EmailParser {
   sanitizeOptions = {

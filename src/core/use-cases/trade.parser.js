@@ -1,6 +1,6 @@
-import Trade from "../../core/entities/trade.js";
-import logger from "../logger/logger.js";
-import { formatPrice } from "../trading/binance/utils.js";
+import Trade from "../entities/trade.js";
+import logger from "../../infrastructure/logger/logger.js";
+import { formatPrice } from "../../infrastructure/trading/binance/utils.js";
 
 const ORDER_TYPES = {
   ENTRY: {
@@ -37,7 +37,7 @@ const PRICE_PATTERNS = {
   SIDE: /short|buy|sell|cover/gi,
 };
 
-export default class TradeDataParser {
+export default class TradeParser {
   async extractTradeData(email) {
     try {
       const subject = email.getSubject();

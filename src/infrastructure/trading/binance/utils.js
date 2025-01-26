@@ -1,39 +1,8 @@
 import logger from "../../logger/logger.js";
-import { binanceConfigLive } from "../../../config/binance.js";
+import { binanceConfigLive } from "./binance.config.js";
 import { futuresUrl, spotUrl, tradeIsActive } from "../../../constants.js";
+import BinanceAdapter from "./binance.adapter.js";
 import crypto from "crypto";
-
-export async function binanceApiCall(signedUrl, method, headers) {
-  try {
-    const response = await fetch(signedUrl, {
-      method: method,
-      headers: headers,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.error(`Binance API error: ${response.status} ${errorText}`);
-      throw new Error(`HTTP error! status: ${response.status} ${errorText}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      logger.error(`Invalid content type or empty response: ${text}`);
-      throw new Error("Invalid response format");
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    if (error.name === "SyntaxError") {
-      logger.error("Failed to parse JSON response:", error);
-      throw new Error("Invalid JSON response from API");
-    }
-    logger.error("Binance API call failed:", error);
-    throw error;
-  }
-}
 
 /**
  * Calculate order quantity based on asset balance and price
@@ -44,18 +13,15 @@ export async function binanceApiCall(signedUrl, method, headers) {
  * @returns {Promise<string>} Formatted quantity string
  */
 export async function getQuantity(baseAsset, orderData, isFutures, isHalf) {
-  // Get lot size constraints
   const [minQuantity, stepSize] = await _getBaseAssetMinLotSize(
     orderData.symbol,
     isFutures
   );
 
-  // Handle market orders
   if (orderData.type === "MARKET") {
     return await _calculateMarketOrderQuantity(baseAsset, stepSize, isHalf);
   }
 
-  // Handle limit/stop orders
   return await _calculateLimitOrderQuantity(orderData, minQuantity, stepSize);
 }
 
@@ -70,15 +36,17 @@ export async function formatPrice(symbol, isFutures, price) {
     ? `${futuresUrl}/fapi/v1/exchangeInfo`
     : `${spotUrl}/api/v3/exchangeInfo?symbol=${symbol}`;
 
-  const result = await binanceApiCall(baseUrl, "GET", {});
+  const result = await BinanceAdapter.binanceApiCall(baseUrl, "GET", {});
 
   let { minPrice, tickSize } = result.symbols
     .filter((ticker) => ticker.symbol === symbol)[0]
     .filters.filter((filter) => filter.filterType === "PRICE_FILTER")[0];
 
-  tickSize = parseInt(tickSize) > 0 ? 0 : tickSize.split(".")[1].indexOf("1") + 1;
+  tickSize =
+    parseInt(tickSize) > 0 ? 0 : tickSize.split(".")[1].indexOf("1") + 1;
 
-  if (minPrice > price && minPrice <= price + price * 0.1) return parseFloat(minPrice);
+  if (minPrice > price && minPrice <= price + price * 0.1)
+    return parseFloat(minPrice);
   return Number(price).toFixed(tickSize);
 }
 
@@ -144,13 +112,14 @@ async function _getBaseAssetMinLotSize(symbol, isFutures) {
     ? `${futuresUrl}/fapi/v1/exchangeInfo`
     : `${spotUrl}/api/v3/exchangeInfo?symbol=${symbol}`;
 
-  const result = await binanceApiCall(baseUrl, "GET", {});
+  const result = await BinanceAdapter.binanceApiCall(baseUrl, "GET", {});
 
   const { minQty, stepSize } = result.symbols
     .filter((ticker) => ticker.symbol === symbol)[0]
     .filters.filter((filter) => filter.filterType === "LOT_SIZE")[0];
 
-  const finalStepSize = parseInt(stepSize) > 0 ? 0 : stepSize.split(".")[1].indexOf("1") + 1;
+  const finalStepSize =
+    parseInt(stepSize) > 0 ? 0 : stepSize.split(".")[1].indexOf("1") + 1;
 
   return [parseFloat(minQty), finalStepSize];
 }
@@ -189,7 +158,7 @@ async function _assetAmount(asset) {
       binanceConfigLive.api_secret
     );
 
-    const quoteAssetAmount = await binanceApiCall(
+    const quoteAssetAmount = await BinanceAdapter.binanceApiCall(
       `https://api.binance.com/sapi/v3/asset/getUserAsset?${queryString}&signature=${signature}`,
       "POST",
       {

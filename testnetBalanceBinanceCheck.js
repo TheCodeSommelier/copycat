@@ -1,11 +1,11 @@
 import {
   binanceConfigTestSpot,
   binanceConfigTestFutures,
-} from "./src/config/binance.js";
+} from "./src/infrastructure/trading/binance/binance.config.js";
 import {
-  binanceApiCall,
   getDataToSend,
 } from "./src/infrastructure/trading/binance/utils.js";
+import BinanceAdapter from "./src/infrastructure/trading/binance/binance.adapter.js";
 
 const MAJOR_COINS = ["BTC", "ETH", "AVAX", "ADA", "DOGE", "ICP", "TON"];
 
@@ -20,7 +20,7 @@ async function spotAssetAmount() {
       binanceConfigTestSpot.api_secret
     );
 
-    const result = await binanceApiCall(
+    const result = await BinanceAdapter.binanceApiCall(
       `https://testnet.binance.vision/api/v3/account?${queryString}&signature=${signature}`,
       "GET",
       {
@@ -48,7 +48,7 @@ async function futuresAssetAmount() {
       binanceConfigTestFutures.api_secret
     );
 
-    const result = await binanceApiCall(
+    const result = await BinanceAdapter.binanceApiCall(
       `https://testnet.binancefuture.com/fapi/v2/balance?${queryString}&signature=${signature}`,
       "GET",
       {

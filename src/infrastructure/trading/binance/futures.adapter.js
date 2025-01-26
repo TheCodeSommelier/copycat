@@ -2,8 +2,9 @@ import { futuresUrl, tradeIsActive } from "../../../constants.js";
 import {
   binanceConfigLive,
   binanceConfigTestFutures,
-} from "../../../config/binance.js";
-import { getQuantity, getDataToSend, binanceApiCall } from "./utils.js";
+} from "./binance.config.js";
+import { getQuantity, getDataToSend } from "./utils.js";
+import BinanceAdapter from "./binance.adapter.js";
 import logger from "../../logger/logger.js";
 import Trade from "../../../core/entities/trade.js";
 
@@ -62,7 +63,7 @@ export default class FuturesAdapter {
         this.binanceConfig.api_secret
       );
 
-      await binanceApiCall(
+      await BinanceAdapter.binanceApiCall(
         `${futuresUrl}/fapi/v1/leverage?${queryString}&signature=${signature}`,
         "POST",
         {
@@ -91,7 +92,7 @@ export default class FuturesAdapter {
         this.binanceConfig.api_secret
       );
 
-      return await binanceApiCall(
+      return await BinanceAdapter.binanceApiCall(
         `${futuresUrl}/fapi/v1/order?${queryString}&signature=${signature}`,
         "POST",
         {
@@ -116,7 +117,7 @@ export default class FuturesAdapter {
       this.binanceConfig.api_secret
     );
 
-    return await binanceApiCall(
+    return await BinanceAdapter.binanceApiCall(
       `${futuresUrl}/fapi/v1/allOpenOrders?${queryString}&signature=${signature}`,
       "DELETE",
       {
@@ -137,7 +138,7 @@ export default class FuturesAdapter {
       this.binanceConfig.api_secret
     );
 
-    const ordersData = await binanceApiCall(
+    const ordersData = await BinanceAdapter.binanceApiCall(
       `${futuresUrl}/fapi/v1/openOrders?${queryString}&signature=${signature}`,
       "GET",
       {
