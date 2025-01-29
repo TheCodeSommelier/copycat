@@ -1,5 +1,7 @@
 # Trading Bot Email Parser
 
+#### *🛑 !Early dev stages: Please keep in mind the docs are subject to change and so is the code! 🛑*
+
 ## Overview
 A Node.js application that monitors an email inbox for trading instructions and executes them on the Binance exchange. The application follows clean architecture principles for maintainability and scalability.
 
