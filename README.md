@@ -13,7 +13,7 @@ A Node.js application that monitors an email inbox for trading instructions and 
 - Error handling and notifications
 - Real-time email processing
 
-## Project Structure
+## Project Structure (TBD)
 ```
 trading-bot/
 ├── src
@@ -84,11 +84,6 @@ trading-bot/
 - Provides concrete implementations of ports
 - Handles external API communications
 
-### Services Layer
-- Orchestrates between different parts of the application
-- Manages business processes
-- Handles cross-cutting concerns
-
 ## Setup
 
 ### Prerequisites
@@ -115,8 +110,8 @@ EMAIL_PASSWORD=your_password
 IMAP_HOST=imap.active24.com
 IMAP_PORT=993
 
-BINANCE_API_KEY=your_binance_key
-BINANCE_API_SECRET=your_binance_secret
+EXCHANGE_API_KEY=your_exchange_key
+EXCHANGE_API_SECRET=your_exchange_secret
 ```
 
 ### Running the Application !!!TBD!!!
@@ -149,7 +144,6 @@ Price: 50000
 ```
 
 ## Security
-- Encrypted credential storage
 - Secure email communication
 - API key protection
 - Input validation
@@ -194,13 +188,6 @@ This allows for:
 - Different log levels (error, info, debug)
 - File and console logging
 - Structured log format
-
-## Contributing
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
 
 ## License !!!TBD!!!
 [Your License Choice]
