@@ -112,14 +112,16 @@ export default class ImapAdapter extends ImapPort {
           try {
             const preParsed = await simpleParser(stream);
 
-            if (!/\w+\s+Alert:\s+\w{0,}\/\w{0,}/gi.test(preParsed.subject)) {
-              return;
+            if (!/\w+\s+Alert:\s+\w+(?:\/)?(?:\w+)/gi.test(preParsed.subject)) {
+              throw new Error("Non-Trade email...");
             }
 
             const secureEmail = await this.emailParser.parse(preParsed);
+
             this.handlers.forEach((handler) => handler(secureEmail));
           } catch (error) {
             this.logger.error("Error parsing email:", error);
+            throw error;
           }
         });
       });
@@ -131,9 +133,7 @@ export default class ImapAdapter extends ImapPort {
   async #reconnect() {
     const delay = (10 - this.maxReconnectionAttempts) * 2000;
     this.logger.info(
-      `Attempting to reconnect in ${delay / 1000} seconds... (${
-        this.maxReconnectionAttempts
-      } attempts remaining)`
+      `Attempting to reconnect in ${delay / 1000} seconds... (${this.maxReconnectionAttempts} attempts remaining)`
     );
 
     try {
