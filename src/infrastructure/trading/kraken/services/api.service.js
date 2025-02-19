@@ -13,7 +13,7 @@ export default class KrakenApiService {
    * @param {String} endpoint - Endpoint to for the call to go to
    * @param {Object} body - Body to be sent in the request
    * @param {Boolean} needSign - If true req will be signed
-   * @returns
+   * @returns {JSON} - API response
    */
   async apiCall(apiConfig, method, endpoint, body = null, needSign = true) {
     try {
@@ -50,8 +50,6 @@ export default class KrakenApiService {
   }
 
   #signReq(secret, urlPath, data) {
-    console.log("PARAMS:", { secret, urlPath, data });
-
     try {
       let encoded;
       if (typeof data === "string") {
@@ -70,14 +68,9 @@ export default class KrakenApiService {
       const hmac = crypto.createHmac("sha512", secretBuffer);
       hmac.update(message, "binary");
       const signature = hmac.digest("base64");
-
-      console.log(`Signature: ${signature}`);
-
       return signature;
     } catch (error) {
       throw new Error(`Failed to sign request: ${error.message}`);
     }
   }
-
-  #prepData() {}
 }

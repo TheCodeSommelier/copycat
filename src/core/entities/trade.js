@@ -17,6 +17,7 @@ export default class Trade {
       this.isHalf = data.isHalf;
       this.isSell = data.isSell;
       this.traderName = data.traderName;
+      this.universalPair = data.universalPair;
       this.exchangeType = this.traderName.toLowerCase() === process.env.ALT_TRADER_NAME ? "DEX" : "CEX";
     } catch (error) {
       logger.error("Trade validations failed:\n", error);

@@ -10,6 +10,7 @@ import KrakenFuturesAdapter from "./infrastructure/trading/kraken/adapters/futur
 import KrakenTradeParser from "./core/use-cases/kraken/trade.parser.js";
 import KrakenAccountService from "./infrastructure/trading/kraken/services/account.service.js";
 import KrakenApiService from "./infrastructure/trading/kraken/services/api.service.js";
+import TickerNormalizer from "./infrastructure/trading/kraken/services/tickerNormalizer.service.js";
 dotenv.config();
 
 // One  more commnent
@@ -19,8 +20,9 @@ const main = async () => {
   const accountService = new KrakenAccountService(logger, apiClient);
   const futuresAdapter = new KrakenFuturesAdapter(logger, apiClient, accountService);
   const spotAdapter = new KrakenSpotAdapter(logger, apiClient, accountService);
-  const tradeAdapter = new KrakenAdapter(logger, spotAdapter, futuresAdapter);
-  const tradeParser = new KrakenTradeParser(logger);
+  const cexAdapter = new KrakenAdapter(logger, spotAdapter, futuresAdapter);
+  const tickerNormalizer = new TickerNormalizer(logger, apiClient);
+  const tradeParser = new KrakenTradeParser(logger, tickerNormalizer);
 
   // Email instances
   const emailParser = new EmailParser(logger);
@@ -33,7 +35,7 @@ const main = async () => {
     const trade = await tradeParser.parseData(email);
     logger.info(`Here it is!`, trade);
 
-    await tradeAdapter.placeOrder(trade);
+    trade.exchangeType === "CEX" ? await cexAdapter.placeOrder(trade) : logger.warn("DEX not implemented yet...");
   });
 };
 

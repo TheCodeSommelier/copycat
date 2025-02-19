@@ -1,8 +1,9 @@
 import Trade from "../../entities/trade.js";
 
 export default class KrakenTradeParser {
-  constructor(logger) {
+  constructor(logger, tickerNormalizer) {
     this.logger = logger;
+    this.tickerNormalizer = tickerNormalizer;
   }
 
   async parseData(email) {
@@ -12,7 +13,7 @@ export default class KrakenTradeParser {
       const traderName = this.#extractTraderName(html);
       const tradeAction = this.#extractSide(subject);
       const isFutures = this.#isFuturesTrade(tradeAction);
-      const tradeTickers = this.#extractTickers(subject, isFutures);
+      const tradeTickers = await this.#extractTickers(subject, isFutures);
       let prices = {};
       const isSell = /sell|cover/i.test(subject) ? true : false;
 
@@ -39,7 +40,7 @@ export default class KrakenTradeParser {
     }
   }
 
-  #extractTickers(subject, isFutures) {
+  async #extractTickers(subject, isFutures) {
     const match = subject.match(/(\p{Lu}+)(?:\/)?(?:(USD.?))/u);
 
     if (!match || !match[0]) {
@@ -48,12 +49,16 @@ export default class KrakenTradeParser {
 
     const baseAsset = match[1];
     const quoteAsset = ["USD", "USDT"].includes(match[2]) ? "USDC" : match[2];
-    const symbol = isFutures ? `PI_${baseAsset}${quoteAsset}` : `${baseAsset}${quoteAsset}`;
+    const symbol = isFutures
+      ? await this.tickerNormalizer.normalizeContractSymbol(baseAsset)
+      : `${baseAsset}${quoteAsset}`;
+    const universalPair = `${match[1]}/USDC`;
 
     return {
       symbol,
       baseAsset,
       quoteAsset,
+      universalPair,
     };
   }
 

@@ -10,5 +10,6 @@ export default class KrakenAccountService {
     const blc = apiCallBlcObj.result[asset];
     console.log("Api call result... BALANCE", apiCallBlcObj);
     console.log("BALANCE", blc);
+    return blc;
   }
 }
