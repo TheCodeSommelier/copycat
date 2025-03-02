@@ -48,17 +48,16 @@ export default class KrakenTradeParser {
     }
 
     const baseAsset = match[1];
-    const quoteAsset = ["USD", "USDT"].includes(match[2]) ? "USDC" : match[2];
+    // const quoteAsset = ["USD", "USDT"].includes(match[2]) ? "USDC" : match[2];
+    const quoteAsset = match[2];
     const symbol = isFutures
       ? await this.tickerNormalizer.normalizeContractSymbol(baseAsset)
-      : `${baseAsset}${quoteAsset}`;
-    const universalPair = `${match[1]}/USDC`;
+      : `${baseAsset}/${quoteAsset}`;
 
     return {
       symbol,
       baseAsset,
       quoteAsset,
-      universalPair,
     };
   }
 

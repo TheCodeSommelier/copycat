@@ -4,117 +4,99 @@ import FilterApplicatorService from "../services/filterApplicator.service.js";
 export default class KrakenSpotAdapter {
   #apiConfig = krakenSpotConfig;
 
-  constructor(logger, apiClient, accountService) {
+  constructor(logger, apiClient, accountService, redis) {
     this.logger = logger;
     this.apiClient = apiClient;
     this.accountService = accountService;
+    this.redis = redis;
   }
 
-  async placeOrder(data) {
-    console.log("DATA HERE => ", data);
-    const nonce = Date.now().toString();
-    const orderData = await this.#prepOrderData(data);
-    const formattedOrders = { ...orderData, nonce };
+  async placeOrder(tradeInstace) {
+    const orderData = await this.#prepOrderData(tradeInstace);
+    console.log("Order data:", orderData);
+    try {
+      const result = await this.apiClient.makeApiCall(this.#apiConfig, "POST", "/0/private/AddOrder", orderData, true);
+      this.logger.info("An order was placed: ", result);
 
-    console.log("Order data:", formattedOrders);
+      if (!orderData.isSell) {
+        const dataToSave = { id: result.result.txid[0], ...orderData, created_at: Date.now() };
+        this.redis.saveOrderData(dataToSave);
+      }
+
+      return result;
+    } catch (error) {
+      this.logger.error(error);
+      throw error;
+    }
   }
 
   // private
 
-  async #prepOrderData(data) {
-    const pairData = await this.#getOrderData(data.universalPair);
-    return data.isSell ? await this.#prepSellOrderData(data, pairData) : await this.#prepBuyOrdersData(data, pairData);
+  async #prepOrderData(tradeInstace) {
+    const pairData = await this.#getOrderData(tradeInstace.symbol);
+
+    return tradeInstace.isSell
+      ? await this.#prepSellOrderData(tradeInstace, pairData)
+      : await this.#prepBuyOrdersData(tradeInstace, pairData);
   }
 
-  async #prepSellOrderData(data, pairData) {
-    const balance = await this.accountService.getBalance(this.#apiConfig, "/0/private/Balance", data.baseAsset);
-    const volume = FilterApplicatorService.calculateSellVolume(balance, pairData, data.isHalf);
+  async #prepSellOrderData(tradeInstace, pairData) {
+    const balance = await this.accountService.getBalance(this.#apiConfig, "/0/private/Balance", tradeInstace.baseAsset);
+    const volume = FilterApplicatorService.calculateSellVolume(balance, pairData.volumeFilters, tradeInstace.isHalf);
 
     return {
-      pair: data.symbol,
+      pair: tradeInstace.symbol,
       ordertype: "market",
       type: "sell",
       volume,
     };
   }
 
-  async #prepBuyOrdersData(data, pairData) {
-    const [entryPrice, stopLoss, takeProfit] = this.#applyPriceFilters(pairData.priceFilters, data);
-    console.log("entryPrice:", entryPrice);
-    console.log("stopLoss:", stopLoss);
-    console.log("takeProfit:", takeProfit);
-    const balance = await this.accountService.getBalance(this.#apiConfig, "/0/private/Balance", data.quoteAsset);
-    const volume = FilterApplicatorService.calculateBuyVolume(balance, data.entryPrice, pairData);
-
-    console.log("VOLUME:", volume);
+  async #prepBuyOrdersData(tradeInstace, pairData) {
+    const [entryPrice, stopLossPrice, takeProfitPrice] = FilterApplicatorService.applyPriceFilters(
+      pairData.priceFilters,
+      tradeInstace
+    );
+    const balance = await this.accountService.getBalance(
+      this.#apiConfig,
+      "/0/private/Balance",
+      tradeInstace.quoteAsset
+    );
+    const volume = FilterApplicatorService.calculateBuyVolume(balance, tradeInstace.entryPrice, pairData.volumeFilters);
 
     return {
-      pair: pairData.altname,
-      orders: [
-        // Main entry order
-        {
-          ordertype: "limit",
-          type: "buy",
-          price: entryPrice,
-          volume,
-        },
-        // Stop loss order
-        {
-          ordertype: "stop-loss-limit",
-          type: "sell",
-          price: stopLoss,
-          volume,
-        },
-        // Take profit order
-        {
-          ordertype: "take-profit-limit",
-          type: "sell",
-          price: takeProfit,
-          volume,
-        },
-      ],
+      price: entryPrice,
+      pair: tradeInstace.symbol,
+      ordertype: "limit",
+      type: "buy",
+      volume,
+      "close[ordertype]": "stop-loss",
+      "close[price]": stopLossPrice,
     };
   }
 
-  async #getOrderData(universalPair) {
-    const response = await this.apiClient.apiCall(
-      { base_url: "https://api.kraken.com" },
+  async #getOrderData(symbol) {
+    const response = await this.apiClient.makeApiCall(
+      { baseUrl: "https://api.kraken.com" },
       "GET",
-      `/0/public/AssetPairs?pair=${universalPair}`,
+      `/0/public/AssetPairs?pair=${symbol}`,
       null,
       false
     );
 
-    console.log("FILTERS:", response);
+    const symbolKey = Object.keys(response.result)[0];
 
-    const universalPairKey = Object.keys(response.result)[0];
-    const pairData = response.result[universalPairKey];
-
-    const {
-      altname = "",
-      lot_decimals: lotDecimals = 0,
-      lot_multiplier: lotMultiplier = 1,
-      tick_size: tickSize = 0,
-      pair_decimals: pairDecimals = 0,
-      ordermin = "0",
-    } = pairData;
+    const pairData = response.result[symbolKey];
+    const { altname, lot_decimals, lot_multiplier, tick_size, pair_decimals, ordermin } = pairData;
 
     return {
       altname,
-      priceFilters: { tickSize, pairDecimals },
+      priceFilters: { tick_size, pair_decimals },
       volumeFilters: {
-        lotDecimals,
-        lotMultiplier,
+        lot_decimals,
+        lot_multiplier,
         ordermin,
       },
     };
-  }
-
-  #applyPriceFilters(priceFilters, data) {
-    const prices = [data.entryPrice, data.stopLoss, data.takeProfit]; // [WARNING] DO NOT CHANGE THE ORDER OF THE PRICES HERE
-    const filteredPrices = prices.map((price) => {
-      return parseFloat(price).toFixed(priceFilters.pairDecimals);
-    });
-    return filteredPrices;
   }
 }

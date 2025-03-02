@@ -5,8 +5,8 @@ export default class TickerNormalizer {
   }
 
   async normalizeSpotBaseAsset(baseAsset) {
-    const apiConfig = { base_url: "https://api.kraken.com" };
-    const ccyData = await this.apiClient.apiCall(apiConfig, "GET", `/0/public/Assets?asset=${baseAsset}`, null, false);
+    const apiConfig = { baseUrl: "https://api.kraken.com" };
+    const ccyData = await this.apiClient.makeApiCall(apiConfig, "GET", `/0/public/Assets?asset=${baseAsset}`, null, false);
     const keys = Object.keys(ccyData.result);
     return ccyData.result[keys[0]].altname;
   }
@@ -14,8 +14,8 @@ export default class TickerNormalizer {
   async normalizeContractSymbol(baseAsset) {
     try {
       let contractAsset = baseAsset === "BTC" ? "XBT" : baseAsset;
-      const apiConfig = { base_url: "https://futures.kraken.com" };
-      const contractData = await this.apiClient.apiCall(
+      const apiConfig = { baseUrl: "https://futures.kraken.com" };
+      const contractData = await this.apiClient.makeApiCall(
         apiConfig,
         "GET",
         `/derivatives/api/v3/tickers/PF_${contractAsset}USD`,

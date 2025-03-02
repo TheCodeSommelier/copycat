@@ -5,11 +5,16 @@ export default class KrakenAccountService {
   }
 
   async getBalance(apiConfig, endpoint, asset) {
-    const nonce = Date.now().toString();
-    const apiCallBlcObj = await this.apiClient.apiCall(apiConfig, "POST", endpoint, { nonce });
-    const blc = apiCallBlcObj.result[asset];
-    console.log("Api call result... BALANCE", apiCallBlcObj);
-    console.log("BALANCE", blc);
-    return blc;
+    const normalizeAsset = String(asset).trim();
+    const assetKey = normalizeAsset === "USD" ? "ZUSD" : normalizeAsset;
+    const apiCallBlcObj = await this.apiClient.makeApiCall(apiConfig, "POST", endpoint);
+    const blc = apiCallBlcObj.result[assetKey];
+    return parseFloat(blc);
+  }
+
+  async getFuturesBalance(apiConfig, endpoint, asset) {
+    const result = this.apiClient.makeApiCall(apiConfig, "GET", endpoint);
+    // const usdBlc = result.accounts.cash.balances[asset];
+    this.logger.warn("Get balance api res:", result);
   }
 }

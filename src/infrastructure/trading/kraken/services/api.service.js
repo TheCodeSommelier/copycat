@@ -15,12 +15,13 @@ export default class KrakenApiService {
    * @param {Boolean} needSign - If true req will be signed
    * @returns {JSON} - API response
    */
-  async apiCall(apiConfig, method, endpoint, body = null, needSign = true) {
+  async makeApiCall(apiConfig, method, endpoint, body = {}, needSign = true) {
     try {
       const headers = {};
       if (needSign) {
+        body.nonce = Date.now().toString();
         const sign = this.#signReq(apiConfig.secret, endpoint, body);
-        headers["API-Key"] = apiConfig.api_key;
+        headers["API-Key"] = apiConfig.apiKey;
         headers["API-Sign"] = sign;
         headers["Content-Type"] = "application/x-www-form-urlencoded";
       }
@@ -34,7 +35,7 @@ export default class KrakenApiService {
         fetchOptions.body = querystring.stringify(body);
       }
 
-      const result = await fetch(`${apiConfig.base_url}${endpoint}`, fetchOptions);
+      const result = await fetch(`${apiConfig.baseUrl}${endpoint}`, fetchOptions);
 
       if (!result.ok) {
         const errMsg = await result.text();
