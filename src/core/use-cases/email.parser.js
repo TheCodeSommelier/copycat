@@ -2,25 +2,10 @@ import Email from "../entities/email.js";
 import crypto from "crypto";
 import validator from "validator";
 import sanitizeHtml from "sanitize-html";
-import logger from "../../infrastructure/logger/logger.js";
 
 export default class EmailParser {
   sanitizeOptions = {
-    allowedTags: [
-      "b",
-      "i",
-      "em",
-      "strong",
-      "p",
-      "br",
-      "h1",
-      "h2",
-      "h3",
-      "ol",
-      "ul",
-      "li",
-      "span",
-    ],
+    allowedTags: ["b", "i", "em", "strong", "p", "br", "h1", "h2", "h3", "ol", "ul", "li", "span"],
     selfClosing: ["br"],
     nonBooleanAttributes: [],
     allowedAttributes: {
@@ -37,6 +22,10 @@ export default class EmailParser {
     },
   };
 
+  constructor(logger) {
+    this.logger = logger;
+  }
+
   /**
    * Parse and secure email data
    * @param {Object} emailData - Raw email data
@@ -52,18 +41,22 @@ export default class EmailParser {
         to: this.#secureAddress(emailData.to),
         from: this.#secureAddress(emailData.from),
         subject: this.#secureText(emailData.subject),
-        emailHash: this.#generateHash(emailData),
+        emailHash: this.#generateHash(emailData.html?.trim()),
       };
       const email = new Email(sanitizedEmail);
-      logger.info(`This is the email that came:\n${email.getAllData()}\n`);
+      this.logger.info(`This is the email that came:\n${email.getAllData()}\n`);
       return email;
     } catch (error) {
-      logger.error(`Email parsing error:\n`, error);
+      this.logger.error(`Email parsing error:\n`, error);
       throw new Error("Failed to parse email securely");
     }
   }
 
   // Private functions
+
+  #extractTrader() {
+
+  }
 
   #generateHash(email) {
     const content = JSON.stringify({
@@ -112,10 +105,7 @@ export default class EmailParser {
 
     secured = secured
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "[REMOVED]")
-      .replace(
-        /(javascript:|data:|vbscript:|<iframe:|<\/frame:)/gi,
-        "[REMOVED]"
-      )
+      .replace(/(javascript:|data:|vbscript:|<iframe:|<\/frame:)/gi, "[REMOVED]")
       .replace(/on\w+=/gi, "[REMOVED]")
       .replace(/&lt;script&gt;[\s\S]*?&lt;\/script&gt;/i, "[REMOVED]");
 

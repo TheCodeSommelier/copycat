@@ -1,28 +1,42 @@
+import crypto from "crypto";
 import ImapAdapter from "./infrastructure/email/adapters/imap.adapter.js";
 import { imapConfig } from "./infrastructure/email/adapters/imap.config.js";
-import TradeParser from "./core/use-cases/trade.parser.js";
 import EmailParser from "./core/use-cases/email.parser.js";
 import logger from "./infrastructure/logger/logger.js";
-import dotenv from "dotenv";
-import BinanceAdapter from "./infrastructure/trading/binance/binance.adapter.js";
 import { tradeIsActive } from "./constants.js";
+import dotenv from "dotenv";
+import KrakenAdapter from "./infrastructure/trading/kraken/adapters/kraken.adapter.js";
+import KrakenSpotAdapter from "./infrastructure/trading/kraken/adapters/spot.adapter.js";
+import KrakenFuturesAdapter from "./infrastructure/trading/kraken/adapters/futures.adapter.js";
+import KrakenTradeParser from "./core/use-cases/kraken/trade.parser.js";
+import KrakenAccountService from "./infrastructure/trading/kraken/services/account.service.js";
+import KrakenApiService from "./infrastructure/trading/kraken/services/api.service.js";
+import TickerNormalizer from "./infrastructure/trading/kraken/services/tickerNormalizer.service.js";
+import Redis from "./infrastructure/repositories/redis.adapter.js";
 dotenv.config();
 
-// One  more commnent
 const main = async () => {
-  const emailParser = new EmailParser();
-  const trader = new BinanceAdapter();
+  const redis = new Redis(logger);
+  const apiClient = new KrakenApiService(logger);
+  const accountService = new KrakenAccountService(logger, apiClient);
+  const futuresAdapter = new KrakenFuturesAdapter(logger, apiClient, accountService, redis);
+  const spotAdapter = new KrakenSpotAdapter(logger, apiClient, accountService, redis);
+  const cexAdapter = new KrakenAdapter(logger, spotAdapter, futuresAdapter);
+  const tickerNormalizer = new TickerNormalizer(logger, apiClient);
+  const tradeParser = new KrakenTradeParser(logger, tickerNormalizer);
+
+  const emailParser = new EmailParser(logger);
   const reciever = new ImapAdapter(imapConfig, logger, emailParser);
-  const tradeParser = new TradeParser();
 
   console.log("Trade Is Active: ", tradeIsActive);
+  console.log(`Redis ping: ${await redis.ping()}\n`);
 
   reciever.monitorEmails();
   reciever.onTradeSignal(async (email) => {
-    const tradeData = await tradeParser.extractTradeData(email);
-    logger.info(`Here it is!`, tradeData);
+    const trade = await tradeParser.parseData(email);
+    logger.info(`Here it is!`, trade);
 
-    trader.executeTrade(tradeData);
+    trade.exchangeType === "CEX" ? await cexAdapter.placeOrder(trade) : logger.warn("DEX not implemented yet...");
   });
 };
 

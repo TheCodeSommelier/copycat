@@ -16,3 +16,9 @@ TODO.*
 test_html_files/
 
 coverage
+
+.vscode
+
+*deprecated*
+*DEPRECATED*
+gtestKrakenSign.*
