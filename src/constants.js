@@ -6,4 +6,4 @@ export const spotUrl = tradeIsActive ? "https://api.binance.com" : "https://test
 export const futuresUrl = tradeIsActive ? "https://fapi.binance.com" : "https://testnet.binancefuture.com";
 export const okxBaseUrl = "https://www.okx.com";
 export const publicMarketDataUrl = "https://data-api.binance.vision";
-export const isProduction = process.env.NODE_ENV === "PRODUCTION";
+export const isProduction = process.env.NODE_ENV?.toLowerCase() === "production";
