@@ -3,7 +3,7 @@ import ImapAdapter from "./infrastructure/email/adapters/imap.adapter.js";
 import { imapConfig } from "./infrastructure/email/adapters/imap.config.js";
 import EmailParser from "./core/use-cases/email.parser.js";
 import logger from "./infrastructure/logger/logger.js";
-import { tradeIsActive } from "./constants.js";
+import { isProduction, tradeIsActive } from "./constants.js";
 import dotenv from "dotenv";
 import KrakenAdapter from "./infrastructure/trading/kraken/adapters/kraken.adapter.js";
 import KrakenSpotAdapter from "./infrastructure/trading/kraken/adapters/spot.adapter.js";
@@ -28,8 +28,9 @@ const main = async () => {
   const emailParser = new EmailParser(logger);
   const reciever = new ImapAdapter(imapConfig, logger, emailParser);
 
-  console.log("Trade Is Active: ", tradeIsActive);
-  console.log(`Redis ping: ${await redis.ping()}\n`);
+  console.log("Trade Is Active:", tradeIsActive);
+  console.log("In prod env:", isProduction);
+  console.log(`Redis ping:${await redis.ping()}\n`);
 
   reciever.monitorEmails();
   reciever.onTradeSignal(async (email) => {
