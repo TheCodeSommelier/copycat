@@ -113,7 +113,9 @@ export default class ImapAdapter extends ImapPort {
             const preParsed = await simpleParser(stream);
 
             if (!/\w+\s+Alert:\s+\w+(?:\/)?(?:\w+)/gi.test(preParsed.subject)) {
-              throw new Error("Non-Trade email...");
+              // throw new Error("Non-Trade email...");
+              this.logger.warn("Non-trade email...");
+              return;
             }
 
             const secureEmail = await this.emailParser.parse(preParsed);
