@@ -48,15 +48,11 @@ export default class EmailParser {
       return email;
     } catch (error) {
       this.logger.error(`Email parsing error:\n`, error);
-      throw new Error("Failed to parse email securely");
+      throw error;
     }
   }
 
   // Private functions
-
-  #extractTrader() {
-
-  }
 
   #generateHash(email) {
     const content = JSON.stringify({

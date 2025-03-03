@@ -5,9 +5,7 @@ import { isProduction } from "../../constants.js";
 dotenv.config();
 
 export default class Email {
-  static allowedDomains = isProduction
-    ? [process.env.TRADER_DOMAIN]
-    : ["tony-masek.com", process.env.TRADER_DOMAIN];
+  #allowedDomains = isProduction ? [process.env.TRADER_DOMAIN] : ["tony-masek.com", process.env.TRADER_DOMAIN];
 
   constructor(data = {}) {
     try {
@@ -69,7 +67,7 @@ export default class Email {
       throw new Error("From address must be a string!");
     }
 
-    if (!Email.allowedDomains.includes(domain)) {
+    if (!this.#allowedDomains.includes(domain)) {
       throw new Error("Needs to come from the allowed sender!");
     }
   }
@@ -87,11 +85,7 @@ export default class Email {
   }
 
   #validateSubject(data) {
-    if (
-      !data.subject ||
-      typeof data.subject !== "string" ||
-      data.subject.length === 0
-    ) {
+    if (!data.subject || typeof data.subject !== "string" || data.subject.length === 0) {
       throw new Error("Subject cannot be empty and must be a string!");
     }
   }

@@ -36,18 +36,11 @@ export default class ImapAdapter extends ImapPort {
 
   async #emitErrorEvent(message) {
     this.isConnected = false;
-
-    // First end the connection properly
     this.imap.end();
-
-    // Wait a brief moment for internal state cleanup
     await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Now emit the error
     const error = new Error(message);
     error.source = "socket";
     error.code = "ECONNRESET";
-
     this.imap.emit("error", error);
   }
 
@@ -113,7 +106,6 @@ export default class ImapAdapter extends ImapPort {
             const preParsed = await simpleParser(stream);
 
             if (!/\w+\s+Alert:\s+\w+(?:\/)?(?:\w+)/gi.test(preParsed.subject)) {
-              // throw new Error("Non-Trade email...");
               this.logger.warn("Non-trade email...");
               return;
             }
