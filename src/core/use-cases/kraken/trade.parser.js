@@ -15,7 +15,7 @@ export default class KrakenTradeParser {
       const isFutures = this.#isFuturesTrade(tradeAction);
       const tradeTickers = await this.#extractTickers(subject, isFutures);
       let prices = {};
-      const isSell = /sell|cover/i.test(subject) ? true : false;
+      const isSell = /sell|short/i.test(subject) ? true : false;
 
       if (!isSell) {
         prices = this.#extractPrices(html);
