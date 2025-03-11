@@ -8,6 +8,7 @@ export default class KrakenAccountService {
     const normalizeAsset = String(asset).trim();
     const assetKey = normalizeAsset === "USD" ? "ZUSD" : normalizeAsset;
     const apiCallBlcObj = await this.apiClient.makeApiCall(apiConfig, "POST", endpoint);
+    this.logger.warn("Get balance api call result: ", apiCallBlcObj)
     const blc = apiCallBlcObj.result[assetKey];
     return parseFloat(blc);
   }
