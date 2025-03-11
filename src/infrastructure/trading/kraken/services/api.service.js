@@ -6,6 +6,74 @@ export default class KrakenApiService {
     this.logger = logger;
   }
 
+  async makeFuturesApiCall(apiConfig, method, endpoint, data = {}, needSign = true) {
+    try {
+      // Construct base URL
+      let url = `${apiConfig.baseUrl}${endpoint}`;
+      let queryParams = "";
+      let postData = "";
+      const nonce = Date.now().toString();
+
+      const headers = {
+        Accept: "application/json",
+      };
+
+      if (method === "POST") {
+        data.nonce = nonce;
+        postData = JSON.stringify(data);
+        headers["Content-Type"] = "application/json";
+      } else if (method === "GET" && Object.keys(data).length > 0) {
+        // For GET with parameters, properly URL encode them
+        const urlSearchParams = new URLSearchParams();
+        Object.entries(data).forEach(([key, value]) => {
+          urlSearchParams.append(key, value);
+        });
+
+        queryParams = urlSearchParams.toString();
+        postData = queryParams;
+        url = `${url}?${queryParams}`;
+      }
+
+      if (needSign) {
+        headers["APIKey"] = apiConfig.apiKey;
+        headers["Nonce"] = nonce;
+        headers["Authent"] = this.#signReq(apiConfig.secret, endpoint, postData);
+
+        this.logger.warn("Futures API call details:", {
+          method,
+          endpoint,
+          nonce,
+          url,
+        });
+      }
+
+      const fetchOptions = {
+        method,
+        headers,
+      };
+
+      if (method === "POST" && Object.keys(data).length > 0) {
+        fetchOptions.body = JSON.stringify(data);
+      }
+
+      this.logger.warn("Making Futures API request:", {
+        url,
+        options: { ...fetchOptions, body: fetchOptions.body ? "..." : undefined },
+      });
+      const response = await fetch(url, fetchOptions);
+
+      if (!response.ok) {
+        const errMsg = await response.text();
+        throw new Error(`Kraken Futures API error (${response.status}): ${errMsg}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      this.logger.error("Kraken Futures API call failed:", error);
+      throw error;
+    }
+  }
+
   /**
    * Makes an API call or the kraken exchange
    * @param {Object} apiConfig - Object with the api key, api secret and the base url
@@ -19,11 +87,19 @@ export default class KrakenApiService {
     try {
       const headers = {};
       if (needSign) {
+        console.log("I ran and needSing is:", needSign);
+
         body.nonce = Date.now().toString();
-        const sign = this.#signReq(apiConfig.secret, endpoint, body);
+        let actualEndpoint = endpoint;
+
+        const sign = this.#signReq(apiConfig.secret, actualEndpoint, body);
         headers["API-Key"] = apiConfig.apiKey;
         headers["API-Sign"] = sign;
         headers["Content-Type"] = "application/x-www-form-urlencoded";
+        if (method === "GET") {
+          actualEndpoint += `?nonce=${body.nonce}`;
+          console.log("actualEndpoint:", actualEndpoint);
+        }
       }
 
       const fetchOptions = {

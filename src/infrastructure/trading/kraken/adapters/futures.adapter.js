@@ -10,26 +10,32 @@ export default class KrakenFuturesAdapter {
   }
 
   async placeOrder(data) {
-    const orderData = this.#prepOrderData(data);
+    const orderData = await this.#prepOrderData(data);
     this.logger.info("Here is your data: ", orderData);
   }
 
   // Private
 
-  #prepOrderData(data) {
-    const balance = this.accountService.getFuturesBalance(this.#apiConfig, "/derivatives/api/v3/accounts", "USD");
-    return data.isSell ? this.#prepShortOrderData(data) : this.#prepCoverOrderData(data);
+  async #prepOrderData(data) {
+    return data.isSell ? await this.#prepShortOrderData(data) : await this.#prepCoverOrderData(data);
   }
 
-  #prepShortOrderData(data) {
-    return {
-      symbol: data.symbol,
-      side: "sell",
-      orderType: "lmt",
-    };
+  async #prepShortOrderData(data) {
+    try {
+      const balance = await this.accountService.getFuturesBalance(this.#apiConfig, "/derivatives/api/v3/accounts", "USD");
+      console.log("Balance:", balance);
+      return {
+        symbol: data.symbol,
+        side: "sell",
+        orderType: "lmt",
+      };
+    } catch (error) {
+      this.logger.error("Failed to prep data for short...");
+      throw error;
+    }
   }
 
-  #prepCoverOrderData(data) {
+  async #prepCoverOrderData(data) {
     return {
       symbol: data.symbol,
       side: "buy",

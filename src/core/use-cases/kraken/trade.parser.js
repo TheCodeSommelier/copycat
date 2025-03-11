@@ -17,7 +17,7 @@ export default class KrakenTradeParser {
       let prices = {};
       const isSell = /sell|short/i.test(subject) ? true : false;
 
-      if (!isSell) {
+      if (/buy|short/i.test(subject)) {
         prices = this.#extractPrices(html);
       }
 

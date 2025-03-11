@@ -30,7 +30,7 @@ const main = async () => {
 
   console.log("Trade Is Active:", tradeIsActive);
   console.log("In prod env:", isProduction);
-  console.log(`Redis ping:${await redis.ping()}\n`);
+  console.log(`Redis ping: ${await redis.ping()}\n`);
 
   reciever.monitorEmails();
   reciever.onTradeSignal(async (email) => {

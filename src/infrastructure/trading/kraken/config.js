@@ -15,15 +15,15 @@ const liveFuturesConfig = {
 };
 
 const testSpotConfig = {
-  apiKey: process.env.KRAKEN_API_KEY_TEST,
-  secret: process.env.KRAKEN_API_SECRET_TEST,
+  apiKey: process.env.KRAKEN_API_KEY_FUTURES,
+  secret: process.env.KRAKEN_API_SECRET_FUTURES,
   baseUrl: "https://api.vip.uat.lobster.kraken.com",
 };
 
 const testFuturesConfig = {
-  apiKey: process.env.KRAKEN_API_KEY_TEST,
-  secret: process.env.KRAKEN_API_SECRET_TEST,
-  baseUrl: "https://demo-futures.kraken.com/",
+  apiKey: process.env.KRAKEN_API_KEY_FUTURES_TEST,
+  secret: process.env.KRAKEN_API_SECRET_FUTURES_TEST,
+  baseUrl: "https://demo-futures.kraken.com",
 };
 
 const testSpotWs2Config = {

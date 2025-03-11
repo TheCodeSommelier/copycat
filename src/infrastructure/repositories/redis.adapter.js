@@ -5,7 +5,6 @@ dotenv.config();
 class Redis {
   #config = {
     url: "redis://localhost:6379",
-    password: process.env.REDIS_PASS,
   };
 
   constructor(logger) {
