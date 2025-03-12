@@ -8,43 +8,32 @@ export default class KrakenApiService {
 
   async makeFuturesApiCall(apiConfig, method, endpoint, data = {}, needSign = true) {
     try {
-      // Construct base URL
       let url = `${apiConfig.baseUrl}${endpoint}`;
-      let queryParams = "";
       let postData = "";
       const nonce = Date.now().toString();
+      data.nonce = nonce;
 
       const headers = {
         Accept: "application/json",
       };
 
       if (method === "POST") {
-        data.nonce = nonce;
         postData = JSON.stringify(data);
-        headers["Content-Type"] = "application/json";
+        headers["Content-Type"] = "application/x-www-form-urlencoded";
       } else if (method === "GET" && Object.keys(data).length > 0) {
-        // For GET with parameters, properly URL encode them
         const urlSearchParams = new URLSearchParams();
+
         Object.entries(data).forEach(([key, value]) => {
           urlSearchParams.append(key, value);
         });
 
-        queryParams = urlSearchParams.toString();
-        postData = queryParams;
-        url = `${url}?${queryParams}`;
+        postData = urlSearchParams.toString();
       }
 
       if (needSign) {
         headers["APIKey"] = apiConfig.apiKey;
         headers["Nonce"] = nonce;
-        headers["Authent"] = this.#signReq(apiConfig.secret, endpoint, postData);
-
-        this.logger.warn("Futures API call details:", {
-          method,
-          endpoint,
-          nonce,
-          url,
-        });
+        headers["Authent"] = this.#signFuturesReq(postData, endpoint, apiConfig.secret, nonce);
       }
 
       const fetchOptions = {
@@ -53,15 +42,10 @@ export default class KrakenApiService {
       };
 
       if (method === "POST" && Object.keys(data).length > 0) {
-        fetchOptions.body = JSON.stringify(data);
+        fetchOptions.body = postData;
       }
 
-      this.logger.warn("Making Futures API request:", {
-        url,
-        options: { ...fetchOptions, body: fetchOptions.body ? "..." : undefined },
-      });
       const response = await fetch(url, fetchOptions);
-
       if (!response.ok) {
         const errMsg = await response.text();
         throw new Error(`Kraken Futures API error (${response.status}): ${errMsg}`);
@@ -148,6 +132,20 @@ export default class KrakenApiService {
       return signature;
     } catch (error) {
       throw new Error(`Failed to sign request: ${error.message}`);
+    }
+  }
+
+  #signFuturesReq(postData, endpointPath, apiSecret) {
+    try {
+      const message = postData + endpointPath;
+      const sha256Hash = crypto.createHash("sha256").update(message).digest();
+      const secretBuffer = Buffer.from(apiSecret, "base64");
+      const hmac = crypto.createHmac("sha512", secretBuffer);
+      hmac.update(sha256Hash);
+      return hmac.digest("base64");
+    } catch (error) {
+      this.logger.error("Error signing Futures request:", error);
+      throw new Error(`Failed to sign Futures request: ${error.message}`);
     }
   }
 }
