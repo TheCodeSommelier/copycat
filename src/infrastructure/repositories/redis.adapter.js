@@ -22,6 +22,33 @@ class Redis {
     }
   }
 
+  async set(key, value) {
+    try {
+      if (typeof value === "object") value = JSON.stringify(value);
+
+      await this.client.set(key, value);
+      this.logger.info(`The ${key} is stored!`);
+    } catch (error) {
+      this.logger.error(`The ${key} could not be saved due to: ${error}`);
+      throw error;
+    }
+  }
+
+  async get(key) {
+    try {
+      const value = await this.client.get(key);
+
+      try {
+        return JSON.parse(value);
+      } catch (error) {
+        return value;
+      }
+    } catch (error) {
+      this.logger.error(`Failed to get key ${key} from Redis:`, error);
+      return null;
+    }
+  }
+
   /**
    * Get Redis singleton instance
    * @param {Object} logger - Logger instance (only used on first call)

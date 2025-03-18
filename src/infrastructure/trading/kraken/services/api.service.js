@@ -13,21 +13,27 @@ export default class KrakenApiService {
       const nonce = Date.now().toString();
       data.nonce = nonce;
 
+      const dataToSend = data;
+      if (dataToSend.json && typeof dataToSend.json === "object") {
+        dataToSend.json = JSON.stringify(dataToSend.json);
+      }
+
       const headers = {
         Accept: "application/json",
       };
 
       if (method === "POST") {
-        postData = JSON.stringify(data);
+        postData = new URLSearchParams(dataToSend).toString();
         headers["Content-Type"] = "application/x-www-form-urlencoded";
-      } else if (method === "GET" && Object.keys(data).length > 0) {
+      } else if (method === "GET" && Object.keys(dataToSend).length > 0) {
         const urlSearchParams = new URLSearchParams();
 
-        Object.entries(data).forEach(([key, value]) => {
+        Object.entries(dataToSend).forEach(([key, value]) => {
           urlSearchParams.append(key, value);
         });
 
         postData = urlSearchParams.toString();
+        url = `${url}?${postData}`;
       }
 
       if (needSign) {
@@ -135,9 +141,13 @@ export default class KrakenApiService {
     }
   }
 
-  #signFuturesReq(postData, endpointPath, apiSecret) {
+  #signFuturesReq(postData, endpointPath, apiSecret, nonce) {
     try {
-      const message = postData + endpointPath;
+      console.log(endpointPath);
+      if (endpointPath.startsWith("/derivatives")) endpointPath = endpointPath.substring("/derivatives".length);
+      console.log(endpointPath);
+
+      const message = postData + nonce + endpointPath;
       const sha256Hash = crypto.createHash("sha256").update(message).digest();
       const secretBuffer = Buffer.from(apiSecret, "base64");
       const hmac = crypto.createHmac("sha512", secretBuffer);
