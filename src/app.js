@@ -13,13 +13,15 @@ import KrakenAccountService from "./infrastructure/trading/kraken/services/accou
 import KrakenApiService from "./infrastructure/trading/kraken/services/api.service.js";
 import TickerNormalizer from "./infrastructure/trading/kraken/services/tickerNormalizer.service.js";
 import Redis from "./infrastructure/repositories/redis.adapter.js";
+import KrakenFilters from "./infrastructure/trading/kraken/services/krakenFilters.service.js";
 dotenv.config();
 
 const main = async () => {
   const redis = new Redis(logger);
   const apiClient = new KrakenApiService(logger);
+  const krakenFiltersService = new KrakenFilters(logger, apiClient, redis);
   const accountService = new KrakenAccountService(logger, apiClient);
-  const futuresAdapter = new KrakenFuturesAdapter(logger, apiClient, accountService, redis);
+  const futuresAdapter = new KrakenFuturesAdapter(logger, apiClient, accountService, redis, krakenFiltersService);
   const spotAdapter = new KrakenSpotAdapter(logger, apiClient, accountService, redis);
   const cexAdapter = new KrakenAdapter(logger, spotAdapter, futuresAdapter);
   const tickerNormalizer = new TickerNormalizer(logger, apiClient);
@@ -30,7 +32,7 @@ const main = async () => {
 
   console.log("Trade Is Active:", tradeIsActive);
   console.log("In prod env:", isProduction);
-  console.log(`Redis ping:${await redis.ping()}\n`);
+  console.log(`Redis ping: ${await redis.ping()}\n`);
 
   reciever.monitorEmails();
   reciever.onTradeSignal(async (email) => {

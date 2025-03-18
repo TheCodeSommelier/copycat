@@ -14,8 +14,9 @@ export default class KrakenAccountService {
   }
 
   async getFuturesBalance(apiConfig, endpoint, asset) {
-    const result = this.apiClient.makeApiCall(apiConfig, "GET", endpoint);
-    // const usdBlc = result.accounts.cash.balances[asset];
+    const result = await this.apiClient.makeFuturesApiCall(apiConfig, "GET", endpoint);
     this.logger.warn("Get balance api res:", result);
+    const usdBlc = result.accounts.cash.balances[asset];
+    return usdBlc;
   }
 }

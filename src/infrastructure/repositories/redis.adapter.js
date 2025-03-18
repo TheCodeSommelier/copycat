@@ -5,7 +5,6 @@ dotenv.config();
 class Redis {
   #config = {
     url: "redis://localhost:6379",
-    password: process.env.REDIS_PASS,
   };
 
   constructor(logger) {
@@ -20,6 +19,33 @@ class Redis {
       await this.client.connect();
     } catch (error) {
       this.logger.error("Redis connection failed:", error);
+    }
+  }
+
+  async set(key, value) {
+    try {
+      if (typeof value === "object") value = JSON.stringify(value);
+
+      await this.client.set(key, value);
+      this.logger.info(`The ${key} is stored!`);
+    } catch (error) {
+      this.logger.error(`The ${key} could not be saved due to: ${error}`);
+      throw error;
+    }
+  }
+
+  async get(key) {
+    try {
+      const value = await this.client.get(key);
+
+      try {
+        return JSON.parse(value);
+      } catch (error) {
+        return value;
+      }
+    } catch (error) {
+      this.logger.error(`Failed to get key ${key} from Redis:`, error);
+      return null;
     }
   }
 
