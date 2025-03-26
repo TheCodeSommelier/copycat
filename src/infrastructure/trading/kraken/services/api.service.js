@@ -143,9 +143,7 @@ export default class KrakenApiService {
 
   #signFuturesReq(postData, endpointPath, apiSecret, nonce) {
     try {
-      console.log(endpointPath);
       if (endpointPath.startsWith("/derivatives")) endpointPath = endpointPath.substring("/derivatives".length);
-      console.log(endpointPath);
 
       const message = postData + nonce + endpointPath;
       const sha256Hash = crypto.createHash("sha256").update(message).digest();

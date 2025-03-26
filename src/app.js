@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import ImapAdapter from "./infrastructure/email/adapters/imap.adapter.js";
 import { imapConfig } from "./infrastructure/email/adapters/imap.config.js";
 import EmailParser from "./core/use-cases/email.parser.js";
