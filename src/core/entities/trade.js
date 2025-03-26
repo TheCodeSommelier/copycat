@@ -25,9 +25,11 @@ export default class Trade {
   }
 
   #validateRequiredFields(data) {
+    const isShort = data.isSell && data.isFutures;
+    const isBuy = !data.isSell && !data.isFutures;
     const required = ["symbol", "baseAsset", "quoteAsset", "tradeAction", "isSell", "isHalf", "isFutures"];
 
-    if (!data.isSell) {
+    if (isShort || isBuy) {
       required.push("entryPrice");
       required.push("stopLoss");
       required.push("takeProfit");

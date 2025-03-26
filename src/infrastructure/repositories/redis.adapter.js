@@ -1,11 +1,12 @@
 import dotenv from "dotenv";
 import { createClient } from "redis";
+import { isProduction } from "../../constants.js";
 dotenv.config();
 
 class Redis {
-  #config = {
-    url: "redis://localhost:6379",
-  };
+  #config = isProduction
+    ? { url: "redis://localhost:6379", password: process.env.REDIS_PASS }
+    : { url: "redis://localhost:6379" };
 
   constructor(logger) {
     this.logger = logger;
