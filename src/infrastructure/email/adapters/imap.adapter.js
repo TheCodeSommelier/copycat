@@ -77,6 +77,7 @@ export default class ImapAdapter extends ImapPort {
     this.imap.on("close", (hadError) => {
       this.isConnected = false;
       this.logger.warn("IMAP connection closed", { hadError });
+      this.#reconnect();
     });
   }
 
